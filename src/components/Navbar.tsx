@@ -15,10 +15,10 @@ const Navbar = () => {
   }, []);
 
   const navLinks = [
-    { name: "Home", href: "#", active: true },
-    { name: "Courses", href: "#" },
-    { name: "Bootcamp", href: "#" },
-    { name: "Callback", href: "#" }, // Shortened for tablet safety
+    { name: "HOME", href: "#", active: true },
+    { name: "MCQ", href: "/mcq" },
+    { name: "DSA", href: "/dsa" },
+    { name: "CHAMPS", href: "/leader" }, // Shortened for tablet safety
   ];
 
   return (

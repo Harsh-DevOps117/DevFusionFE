@@ -39,9 +39,10 @@ const HeroSection: React.FC = () => {
   }, []);
 
   const navLinks = [
-    { name: "Home", href: "#", active: true },
-    { name: "Courses", href: "#" },
-    { name: "Bootcamp", href: "#" },
+    { name: "HOME", href: "/" },
+    { name: "MCQ", href: "/mcq" },
+    { name: "DSA", href: "/dsa" },
+    { name: "CHAMPS", href: "/leader" },
   ];
 
   const handleSignInClick = () => {

@@ -10,7 +10,9 @@ import ResumePivot from "./components/Interview/ResumeAnalysiss";
 import NotFound from "./components/NotFound";
 import InterviewPage from "./pages/InterviewPage";
 import LandingPage from "./pages/LandingPage";
+import Leaderboard from "./pages/Leaderboard";
 import Userpage from "./pages/Userpages";
+import McqPage from "./pages/questionPageMcq";
 const ScrollToTop = () => {
   const { pathname } = useLocation();
   useEffect(() => {
@@ -30,6 +32,8 @@ const App = () => {
           <Route path="/review" element={<ResumePivot />}></Route>
           <Route path="/interview" element={<InterviewPage />} />
           <Route path="/interview/:id" element={<InterviewPage />} />
+          <Route path="/mcq" element={<McqPage></McqPage>}></Route>
+          <Route path="/leader" element={<Leaderboard></Leaderboard>}></Route>
           {/* Example Placeholder for future pages:
             //
             <Route path="/courses" element={<Courses />} />
