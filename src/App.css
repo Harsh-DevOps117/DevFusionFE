@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: fontNormal;
+  src: url("./assets/NeueMachina-Regular.woff2");
+}
+
+@font-face {
+  font-family: fontlight;
+  src: url("./assets/NeueMachina-Light.woff2");
+}
+
+@font-face {
+  font-family: fontbold;
+  src: url("./assets/NeueMachina-Bold.woff2");
+}
+
+/* Custom utility classes mapping to your font families */
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+::-webkit-scrollbar-button {
+  display: none;
+}
+
+* {
+  font-family: fontNormal;
+}
