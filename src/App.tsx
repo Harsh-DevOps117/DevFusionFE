@@ -56,11 +56,10 @@ const App = () => {
         <Routes>
           {/* --- PUBLIC ROUTES --- */}
           <Route path="/" element={<LandingPage />} />
-          <Route path="/leader" element={<Leaderboard />} />
-
           {/* --- PROTECTED USER ROUTES --- */}
-          {/* In routes ke liye user ka logged-in hona zaroori hai */}
+          {/* In routes ke liye user ka logged-in hona zaroori hai */}{" "}
           <Route element={<ProtectedRoute />}>
+            <Route path="/leader" element={<Leaderboard />} />
             <Route path="/profile" element={<Userpage />} />
             <Route path="/review" element={<ResumePivot />} />
             <Route path="/interview" element={<InterviewPage />} />
@@ -71,14 +70,12 @@ const App = () => {
             <Route path="/submissions" element={<SubmissionsPage />} />
             <Route path="/playlists" element={<PlaylistsPage />} />
           </Route>
-
           {/* --- PROTECTED ADMIN ROUTES --- */}
           {/* In routes ke liye user ka ADMIN hona zaroori hai */}
           <Route element={<AdminRoute />}>
             <Route path="/create-problem" element={<CreateProblemPage />} />
             <Route path="/stats" element={<AdminDashboard />} />
           </Route>
-
           {/* --- 404 HANDLER --- */}
           <Route
             path="*"

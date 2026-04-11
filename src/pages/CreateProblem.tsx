@@ -54,16 +54,60 @@ export default function CreateProblemPage() {
 
   const handleSubmit = async () => {
     try {
+      // ✅ Clean tags
+      const tags = form.tags
+        .split(",")
+        .map((t: string) => t.trim())
+        .filter(Boolean);
+
+      // ✅ Remove empty testcases
+      const validTestcases = form.testcases.filter(
+        (tc: any) => tc.input.trim() && tc.output.trim(),
+      );
+
+      // ✅ Remove empty examples
+      const validExamples = form.examples.filter(
+        (ex: any) => ex.input.trim() && ex.output.trim(),
+      );
+
+      // ✅ Remove empty reference solutions (CRITICAL FIX)
+      const validSolutions: any = {};
+      Object.entries(form.referenceSolutions).forEach(([lang, code]: any) => {
+        if (code && code.trim().length > 0) {
+          validSolutions[lang] = code;
+        }
+      });
+
+      // 🚨 Validations (prevent backend failure)
+      if (!form.title.trim() || !form.description.trim()) {
+        alert("Title and Description are required");
+        return;
+      }
+
+      if (validTestcases.length === 0) {
+        alert("At least one valid testcase is required");
+        return;
+      }
+
+      if (Object.keys(validSolutions).length === 0) {
+        alert("At least one reference solution is required");
+        return;
+      }
+
       const payload = {
         ...form,
-        tags: form.tags
-          .split(",")
-          .map((t: string) => t.trim())
-          .filter(Boolean),
+        tags,
+        testcases: validTestcases,
+        examples: validExamples,
+        referenceSolutions: validSolutions,
       };
+
+      console.log("FINAL PAYLOAD:", payload); // 🔥 debug
+
       const res = await createProblem(payload);
+
       alert("✅ Problem Created Successfully!");
-      console.log(res.data);
+      console.log(res);
     } catch (err: any) {
       console.error(err);
       alert(err?.response?.data?.error || "Failed to create problem");
@@ -72,11 +116,9 @@ export default function CreateProblemPage() {
 
   return (
     <div className="min-h-screen bg-[#050505] text-white pb-20">
-      {/* Background Grid */}
       <div className="fixed inset-0 bg-[linear-gradient(to_right,#1a1a1a_1px,transparent_1px),linear-gradient(to_bottom,#1a1a1a_1px,transparent_1px)] bg-[size:50px_50px] opacity-20 pointer-events-none" />
 
       <div className="relative max-w-5xl mx-auto px-6 pt-12">
-        {/* BACK BUTTON + HEADER */}
         <div className="flex items-center justify-between mb-10">
           <button
             onClick={() => navigate("/")}
@@ -138,7 +180,7 @@ export default function CreateProblemPage() {
                 />
 
                 <select
-                  className="bg-white/5 border border-white/10 focus:border-[#f97316] rounded-2xl px-6 py-4 focus:outline-none transition-all"
+                  className="bg-white/5 border border-white/10 focus:border-[#f97316] rounded-2xl px-6 py-4 focus:outline-none transition-all text-orange-500"
                   value={form.difficulty}
                   onChange={(e) => handleChange("difficulty", e.target.value)}
                 >
