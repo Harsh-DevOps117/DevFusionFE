@@ -1,6 +1,6 @@
 "use client";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const Navbar = () => {
@@ -15,10 +15,10 @@ const Navbar = () => {
   }, []);
 
   const navLinks = [
-    { name: "HOME", href: "#", active: true },
+    { name: "HOME", href: "/" },
     { name: "MCQ", href: "/mcq" },
     { name: "DSA", href: "/problems" },
-    { name: "CHAMPS", href: "/leader" }, // Shortened for tablet safety
+    { name: "CHAMPS", href: "/leader" },
   ];
 
   return (
@@ -32,9 +32,6 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-6 md:px-12 flex items-center justify-between">
         {/* Logo Section - Flex-shrink-0 prevents it from squishing */}
         <div className="flex items-center gap-2 group cursor-pointer shrink-0">
-          <div className="w-9 h-9 bg-gradient-to-br from-[#f97316] to-[#ea580c] rounded-xl flex items-center justify-center font-machina-bold text-white shadow-[0_0_20px_rgba(249,115,22,0.3)] transition-transform group-hover:scale-105">
-            P
-          </div>
           <span className="text-white text-xl font-machina-bold tracking-tight hidden xs:block">
             PrepGrid
           </span>
@@ -60,18 +57,6 @@ const Navbar = () => {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3 shrink-0">
-          <a
-            href="#"
-            className="hidden sm:flex items-center gap-2 text-sm font-machina-bold text-white/70 hover:text-[#f97316] transition-colors mr-2"
-          >
-            Sign In
-          </a>
-
-          <button className="hidden lg:flex items-center gap-2 bg-white text-black px-5 py-2.5 rounded-xl font-machina-bold text-xs hover:bg-[#f97316] hover:text-white transition-all active:scale-95">
-            Join Now
-            <ArrowRight size={14} />
-          </button>
-
           {/* Hamburger - Visible on all Tablets/Phones below 1024px */}
           <button
             onClick={() => setIsOpen(!isOpen)}
@@ -113,7 +98,7 @@ const Navbar = () => {
                 </motion.a>
               ))}
               <div className="h-[1px] w-20 bg-white/10 my-4" />
-              <motion.a
+              {/* <motion.a
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5 }}
@@ -122,7 +107,7 @@ const Navbar = () => {
                 className="text-2xl font-machina-bold text-[#f97316]"
               >
                 Sign In
-              </motion.a>
+              </motion.a> */}
             </div>
           </motion.div>
         )}
