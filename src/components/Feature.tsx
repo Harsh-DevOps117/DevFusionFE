@@ -14,6 +14,7 @@ import { useState } from "react";
 import { toast } from "react-toastify"; // 🔥 Added
 import { createOrder, verifyPayment } from "../services/paymentService";
 import { loadRazorpayScript, openRazorpay } from "../services/razorpay";
+import PlanGate from "./PlanGate";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -287,41 +288,43 @@ const PrepGridFeatures = () => {
           </motion.div>
 
           {/* ⚡ GO PRO BANNER */}
-          <motion.div variants={itemVariants} className="md:col-span-3">
-            <div className="group h-full bg-[#0d0d0d] border border-[#f97316]/20 rounded-2xl p-6 sm:p-10 hover:border-orange-500/40 transition-all duration-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-[#f97316]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="relative z-10">
-                <div className="inline-flex items-center gap-1.5 bg-orange-500/10 text-orange-400 px-3 py-1 rounded-full text-[11px] mb-3 border border-orange-500/20">
-                  <Zap size={12} className="animate-pulse" />
-                  <span className="font-machina-bold tracking-wider">
-                    RECOMMENDED
-                  </span>
+          <PlanGate hideFor="PRO">
+            <motion.div variants={itemVariants} className="md:col-span-3">
+              <div className="group h-full bg-[#0d0d0d] border border-[#f97316]/20 rounded-2xl p-6 sm:p-10 hover:border-orange-500/40 transition-all duration-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-[#f97316]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="relative z-10">
+                  <div className="inline-flex items-center gap-1.5 bg-orange-500/10 text-orange-400 px-3 py-1 rounded-full text-[11px] mb-3 border border-orange-500/20">
+                    <Zap size={12} className="animate-pulse" />
+                    <span className="font-machina-bold tracking-wider">
+                      RECOMMENDED
+                    </span>
+                  </div>
+                  <h3 className="text-2xl sm:text-3xl font-machina-bold text-white group-hover:text-orange-50">
+                    Go Pro Today
+                  </h3>
+                  <p className="text-white/45 text-sm mt-1.5 max-w-md uppercase tracking-widest text-[10px]">
+                    Unlimited AI interviews & Advanced analytics
+                  </p>
                 </div>
-                <h3 className="text-2xl sm:text-3xl font-machina-bold text-white group-hover:text-orange-50">
-                  Go Pro Today
-                </h3>
-                <p className="text-white/45 text-sm mt-1.5 max-w-md uppercase tracking-widest text-[10px]">
-                  Unlimited AI interviews & Advanced analytics
-                </p>
-              </div>
 
-              <button
-                className="relative z-10 bg-[#f97316] hover:bg-orange-500 active:scale-95 px-8 py-4 rounded-xl font-machina-bold text-base flex items-center gap-3 text-white transition-all duration-200 shadow-[0_0_24px_rgba(249,115,22,0.3)] shrink-0 disabled:opacity-50"
-                onClick={() => handlePayment(499)}
-                disabled={loading}
-              >
-                {loading ? (
-                  <span className="animate-pulse">PROCESSING...</span>
-                ) : (
-                  <>
-                    <Zap size={18} />
-                    <span>Upgrade — ₹499/mo</span>
-                    <ArrowRight size={16} />
-                  </>
-                )}
-              </button>
-            </div>
-          </motion.div>
+                <button
+                  className="relative z-10 bg-[#f97316] hover:bg-orange-500 active:scale-95 px-8 py-4 rounded-xl font-machina-bold text-base flex items-center gap-3 text-white transition-all duration-200 shadow-[0_0_24px_rgba(249,115,22,0.3)] shrink-0 disabled:opacity-50"
+                  onClick={() => handlePayment(499)}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <span className="animate-pulse">PROCESSING...</span>
+                  ) : (
+                    <>
+                      <Zap size={18} />
+                      <span>Upgrade — ₹499/mo</span>
+                      <ArrowRight size={16} />
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </PlanGate>
         </motion.div>
       </div>
     </section>
