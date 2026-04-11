@@ -39,40 +39,84 @@ export default function InterviewPage() {
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isAiSpeakingRef = useRef(false);
-  const transcriptRef = useRef(""); // Latest voice data holder
+  const isListeningRef = useRef(false);
+  // Accumulates only FINAL recognised sentences until we send
+  const finalTranscriptRef = useRef("");
 
   useEffect(() => {
     isAiSpeakingRef.current = isAiSpeaking;
   }, [isAiSpeaking]);
 
+  useEffect(() => {
+    isListeningRef.current = isListening;
+  }, [isListening]);
+
+  // ==========================================
+  // CLEAN TEARDOWN — used by end-call & unmount
+  // ==========================================
+  const teardown = useCallback(() => {
+    // 1. Kill silence timer
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    // 2. Stop speech recognition (prevent onend restart loop)
+    if (recognitionRef.current) {
+      recognitionRef.current.onend = null;
+      recognitionRef.current.stop();
+    }
+    // 3. Stop all camera/mic hardware tracks
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    // 4. Leave socket room
+    socket.emit("leave-interview");
+    socket.off("audio-chunk");
+    socket.off("interview-complete");
+  }, []);
+
+  const endCall = useCallback(() => {
+    teardown();
+    navigate("/profile");
+  }, [teardown, navigate]);
+
   // ==========================================
   // 1. SEND MESSAGE (TEXT + UI SYNC)
   // ==========================================
+  // Use refs so voice callbacks always see the latest version without
+  // recreating the recognition engine on every render.
+  const inputTextRef = useRef("");
+  const idRef = useRef(id);
+  useEffect(() => {
+    inputTextRef.current = inputText;
+  }, [inputText]);
+  useEffect(() => {
+    idRef.current = id;
+  }, [id]);
+
   const handleSendMessage = useCallback(
     async (textOverride?: string) => {
-      const finalMsg = (textOverride ?? inputText).trim();
+      const finalMsg = (textOverride ?? inputTextRef.current).trim();
       if (!finalMsg) return;
 
-      // Reset voice buffers immediately
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-      transcriptRef.current = "";
+      finalTranscriptRef.current = "";
       setInputText("");
 
-      // Update Chat UI
       setMessages((prev) => [...prev, { sender: "You", text: finalMsg }]);
-      setIsAiSpeaking(true); // Orb glows while AI processes
+      setIsAiSpeaking(true);
 
       try {
-        await api.post("/respond", { interviewId: id, userInput: finalMsg });
-      } catch (err) {
+        await api.post("/respond", {
+          interviewId: idRef.current,
+          userInput: finalMsg,
+        });
+      } catch {
         setIsAiSpeaking(false);
       }
     },
-    [id, inputText],
+    [], // stable — reads via refs
   );
 
   // ==========================================
-  // 2. VOICE-TO-TEXT ENGINE (REAL-TIME UI)
+  // 2. ROBUST VOICE-TO-TEXT ENGINE
+  // Initialised ONCE on mount. Callbacks read state via refs so the
+  // engine never needs to be torn down & rebuilt.
   // ==========================================
   useEffect(() => {
     const SpeechRecognition =
@@ -84,51 +128,89 @@ export default function InterviewPage() {
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-US";
+    recognition.maxAlternatives = 1;
 
     recognition.onresult = (event: any) => {
-      if (isAiSpeakingRef.current) return; // Ignore AI's own voice
+      if (isAiSpeakingRef.current) return;
 
-      let liveTranscript = "";
+      let interimText = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        liveTranscript += event.results[i][0].transcript;
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalTranscriptRef.current += result[0].transcript + " ";
+        } else {
+          interimText += result[0].transcript;
+        }
       }
 
-      // STEP A: Visual Update (Box me dikhega)
-      setInputText(liveTranscript);
-      transcriptRef.current = liveTranscript;
+      setInputText((finalTranscriptRef.current + interimText).trim());
 
-      // STEP B: Auto-Send Logic (1.8s silence)
-      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = setTimeout(() => {
-        if (transcriptRef.current.trim().length > 2) {
-          handleSendMessage(transcriptRef.current);
-        }
-      }, 1800);
+      if (finalTranscriptRef.current.trim().length > 0) {
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = setTimeout(() => {
+          const toSend = finalTranscriptRef.current.trim();
+          if (toSend.length > 2) handleSendMessage(toSend);
+        }, 1800);
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      if (event.error === "no-speech" || event.error === "aborted") return;
+      console.warn("STT error:", event.error);
     };
 
     recognition.onend = () => {
-      if (isListening && !isAiSpeakingRef.current) {
+      // Auto-restart only if user hasn't turned voice off and AI isn't talking
+      if (isListeningRef.current && !isAiSpeakingRef.current) {
         try {
           recognition.start();
-        } catch (e) {}
+        } catch {
+          /* already running */
+        }
       }
     };
 
     recognitionRef.current = recognition;
-    return () => recognition.stop();
-  }, [id, isListening, handleSendMessage]);
 
-  const toggleVoice = () => {
-    if (isListening) {
+    return () => {
+      recognition.onend = null;
+      recognition.stop();
+    };
+  }, []); // <-- empty deps: created once, reads everything via refs
+
+  const toggleVoice = useCallback(() => {
+    if (isListeningRef.current) {
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      finalTranscriptRef.current = "";
+      recognitionRef.current?.onend && (recognitionRef.current.onend = null);
       recognitionRef.current?.stop();
+      // Re-attach onend after stop so future toggles work
+      setTimeout(() => {
+        if (recognitionRef.current) {
+          recognitionRef.current.onend = () => {
+            if (isListeningRef.current && !isAiSpeakingRef.current) {
+              try {
+                recognitionRef.current.start();
+              } catch {
+                /* ok */
+              }
+            }
+          };
+        }
+      }, 100);
       setIsListening(false);
-    } else {
-      setIsListening(true);
       setInputText("");
-      transcriptRef.current = "";
-      recognitionRef.current?.start();
+    } else {
+      finalTranscriptRef.current = "";
+      setInputText("");
+      setIsListening(true);
+      try {
+        recognitionRef.current?.start();
+      } catch {
+        /* already running */
+      }
     }
-  };
+  }, []);
 
   // ==========================================
   // 3. SOCKET & AUDIO OUTPUT
@@ -146,15 +228,24 @@ export default function InterviewPage() {
       }
 
       if (data.audio) {
-        recognitionRef.current?.stop(); // Pause mic while AI talks
+        // Pause mic while AI plays audio
+        recognitionRef.current?.stop();
         setIsAiSpeaking(true);
 
         const audio = new Audio(`data:audio/mp3;base64,${data.audio}`);
         audio.play().catch(() => setIsAiSpeaking(false));
         audio.onended = () => {
           setIsAiSpeaking(false);
-          if (isListening)
-            setTimeout(() => recognitionRef.current?.start(), 300);
+          // Resume mic only if user had voice mode on
+          if (isListeningRef.current) {
+            setTimeout(() => {
+              try {
+                recognitionRef.current?.start();
+              } catch {
+                // already running
+              }
+            }, 300);
+          }
         };
       }
     });
@@ -165,7 +256,7 @@ export default function InterviewPage() {
       socket.off("audio-chunk");
       socket.off("interview-complete");
     };
-  }, [id, isListening]);
+  }, [id]);
 
   // ==========================================
   // HARDWARE & CAMERA
@@ -283,37 +374,60 @@ export default function InterviewPage() {
               </div>
             )}
           </div>
-          {/* CONTROL BAR */}
+
+          {/* CONTROL BAR — single mic button, mute, camera, editor, hang-up */}
           <div className="h-16 flex items-center justify-between px-6 bg-[#0d0d0d] rounded-2xl border border-white/5">
+            {/* SINGLE MIC TOGGLE — voice-to-text on/off */}
             <button
               onClick={toggleVoice}
-              className={`p-3 rounded-xl transition-all ${isListening ? "bg-red-500 text-white shadow-lg shadow-red-500/30" : "bg-[#f97316]/10 text-[#f97316]"}`}
+              title={isListening ? "Stop voice" : "Start voice"}
+              className={`p-3 rounded-xl transition-all ${
+                isListening
+                  ? "bg-red-500 text-white shadow-lg shadow-red-500/30"
+                  : "bg-[#f97316]/10 text-[#f97316]"
+              }`}
             >
               {isListening ? <Mic size={20} /> : <MicOff size={20} />}
             </button>
+
             <div className="flex gap-2">
+              {/* HARDWARE MUTE — silences the actual mic track */}
               <button
-                onClick={() =>
-                  streamRef.current
-                    ?.getAudioTracks()
-                    .forEach((t) => (t.enabled = isMuted)) ||
-                  setIsMuted(!isMuted)
-                }
-                className="p-3 bg-white/5 rounded-xl text-white/40"
+                onClick={() => {
+                  streamRef.current?.getAudioTracks().forEach((t) => {
+                    t.enabled = isMuted; // toggle: if currently muted, re-enable
+                  });
+                  setIsMuted(!isMuted);
+                }}
+                title={isMuted ? "Unmute mic" : "Mute mic"}
+                className={`p-3 rounded-xl transition-all ${
+                  isMuted
+                    ? "bg-yellow-500/20 text-yellow-400"
+                    : "bg-white/5 text-white/40"
+                }`}
               >
                 <MicOff size={18} />
               </button>
+
+              {/* CAMERA TOGGLE */}
               <button
-                onClick={() =>
-                  streamRef.current
-                    ?.getVideoTracks()
-                    .forEach((t) => (t.enabled = isCameraOff)) ||
-                  setIsCameraOff(!isCameraOff)
-                }
-                className="p-3 bg-white/5 rounded-xl text-white/40"
+                onClick={() => {
+                  streamRef.current?.getVideoTracks().forEach((t) => {
+                    t.enabled = isCameraOff;
+                  });
+                  setIsCameraOff(!isCameraOff);
+                }}
+                title={isCameraOff ? "Turn camera on" : "Turn camera off"}
+                className={`p-3 rounded-xl transition-all ${
+                  isCameraOff
+                    ? "bg-yellow-500/20 text-yellow-400"
+                    : "bg-white/5 text-white/40"
+                }`}
               >
                 <VideoOff size={18} />
               </button>
+
+              {/* CODE EDITOR TOGGLE */}
               <button
                 onClick={() => setShowEditor(!showEditor)}
                 className={`p-3 rounded-xl ${showEditor ? "bg-[#f97316] text-black" : "bg-white/5 text-white/40"}`}
@@ -321,6 +435,8 @@ export default function InterviewPage() {
                 <Code2 size={18} />
               </button>
             </div>
+
+            {/* HANG UP */}
             <button
               onClick={() => navigate("/profile")}
               className="p-3 bg-red-500 rounded-xl"
@@ -333,9 +449,9 @@ export default function InterviewPage() {
         {/* CHAT & EDITOR */}
         <div className="flex-1 flex gap-4 overflow-hidden">
           <div className="flex-1 bg-[#0d0d0d] rounded-[2rem] border border-white/5 flex flex-col overflow-hidden">
-            <div className="h-12 border-b border-white/5 flex items-center px-6 text-[10px] tracking-widest text-white/20 uppercase shrink-0">
+            <div className="h-12 border-b border-white/5 flex items-center px-6 text-[20px] tracking-widest text-white uppercase shrink-0">
               <Terminal size={12} className="mr-2" />
-              COMMS_STREAM
+              Type - Start The Interview
             </div>
             <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-black/20 custom-scrollbar">
               {messages.map((m, i) => (
@@ -354,18 +470,21 @@ export default function InterviewPage() {
             </div>
             <div className="p-5 bg-black/40 border-t border-white/5">
               <div className="relative flex items-center gap-3">
-                {/* THE INPUT BOX: Isme tumhare bolne par real-time text aayega */}
                 <input
                   className="flex-1 bg-black border border-white/10 rounded-2xl p-4 text-sm outline-none focus:border-[#f97316]/50 transition-all text-white placeholder:text-white/5 disabled:opacity-50"
                   placeholder={
                     isAiSpeaking
                       ? "Sarah is speaking..."
                       : isListening
-                        ? "Listening... speak now"
-                        : "Type or click the Mic..."
+                        ? "Listening… speak now"
+                        : "Type or click the mic…"
                   }
                   value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
+                  onChange={(e) => {
+                    // Manual edits override voice buffer
+                    finalTranscriptRef.current = "";
+                    setInputText(e.target.value);
+                  }}
                   onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
                   disabled={isAiSpeaking}
                 />

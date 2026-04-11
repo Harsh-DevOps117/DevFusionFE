@@ -181,7 +181,7 @@ const HeroSection: React.FC = () => {
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
               className="fixed inset-0 h-screen w-screen bg-[#0a0a0a] z-[105] flex flex-col items-center justify-center lg:hidden"
             >
-              <div className="flex flex-col items-center gap-8 relative z-10">
+              <div className="flex flex-col items-center gap-4 relative z-10">
                 {[...navLinks, { name: "Resume Review" }].map((link, i) => (
                   <motion.a
                     key={link.name}
@@ -196,7 +196,7 @@ const HeroSection: React.FC = () => {
                         navigate("/review");
                       }
                     }}
-                    className="text-4xl font-machina-bold text-white hover:text-[#f97316] transition-colors tracking-tighter"
+                    className="text-2xl font-machina-bold text-white hover:text-[#f97316] transition-colors tracking-tighter"
                   >
                     {link.name}
                   </motion.a>
