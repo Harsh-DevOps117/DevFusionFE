@@ -17,7 +17,7 @@ const Navbar = () => {
   const navLinks = [
     { name: "HOME", href: "#", active: true },
     { name: "MCQ", href: "/mcq" },
-    { name: "DSA", href: "/dsa" },
+    { name: "DSA", href: "/problems" },
     { name: "CHAMPS", href: "/leader" }, // Shortened for tablet safety
   ];
 

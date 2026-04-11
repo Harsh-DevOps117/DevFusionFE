@@ -41,7 +41,7 @@ const HeroSection: React.FC = () => {
   const navLinks = [
     { name: "HOME", href: "/" },
     { name: "MCQ", href: "/mcq" },
-    { name: "DSA", href: "/dsa" },
+    { name: "DSA", href: "/problems" },
     { name: "CHAMPS", href: "/leader" },
   ];
 

@@ -23,8 +23,8 @@ const plans = [
     name: "Pro",
     description:
       "Everything you need to master tech interviews and secure offers.",
-    priceMonthly: 12,
-    priceYearly: 99,
+    priceMonthly: 499,
+    priceYearly: 5000,
     popular: true,
     buttonText: "Upgrade to Pro",
     features: [
@@ -40,8 +40,8 @@ const plans = [
     name: "Enterprise",
     description:
       "Built for coding clubs, bootcamps, and university placements.",
-    priceMonthly: 49,
-    priceYearly: 499,
+    priceMonthly: 1000,
+    priceYearly: 7000,
     popular: false,
     buttonText: "Contact Sales",
     features: [
@@ -147,7 +147,7 @@ const PricingSection: React.FC = () => {
             {/* Price */}
             <div className="mb-8 flex items-end gap-2">
               <span className="text-white text-5xl font-machina-bold leading-none">
-                ${isYearly ? plan.priceYearly : plan.priceMonthly}
+                ₹{isYearly ? plan.priceYearly : plan.priceMonthly}
               </span>
               <span className="text-white/40 text-sm font-machina-light mb-1">
                 / {isYearly ? "year" : "month"}
