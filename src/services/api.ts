@@ -2,10 +2,38 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://localhost:3007/v1",
+  baseURL: "http://16.171.200.75/v1",
   withCredentials: true,
 });
 
+// ✅ REQUEST INTERCEPTOR (attach token)
+API.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token"); // or "accessToken"
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+
+// ❌ OPTIONAL: RESPONSE INTERCEPTOR (handle 401)
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      console.error("Unauthorized! Redirecting...");
+      // optional redirect
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  },
+);
+
+// APIs
 export const getProblems = () => API.get("/problem/get-all-problems");
 
 export const getProblemById = (id: string) =>
@@ -41,4 +69,5 @@ export const createProblem = (data: any) =>
   API.post(`/problem/create-problem`, data);
 
 export const getAdminStats = () => API.get("/stats");
+
 export default API;

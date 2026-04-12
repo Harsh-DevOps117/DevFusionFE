@@ -1,25 +1,24 @@
-export const createOrder = async (amount: number) => {
-  const res = await fetch("http://localhost:3007/v1/create-order", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include",
-    body: JSON.stringify({ amount }),
-  });
+// src/services/paymentApi.ts
+import api from "./api"; // Import your configured axios instance
 
-  return res.json();
+export const createOrder = async (amount: number) => {
+  try {
+    // This now automatically gets the Bearer token from your interceptor!
+    const res = await api.post("/create-order", { amount });
+    return res.data;
+  } catch (error: any) {
+    console.error("Order Creation Failed:", error.response?.data);
+    throw error;
+  }
 };
 
 export const verifyPayment = async (payload: any) => {
-  const res = await fetch("http://localhost:3007/v1/verify-payment", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include",
-    body: JSON.stringify(payload),
-  });
-
-  return res.json();
+  try {
+    // This also sends the token automatically
+    const res = await api.post("/verify-payment", payload);
+    return res.data;
+  } catch (error: any) {
+    console.error("Payment Verification Failed:", error.response?.data);
+    throw error;
+  }
 };

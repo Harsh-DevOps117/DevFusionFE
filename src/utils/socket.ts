@@ -1,7 +1,7 @@
 import { io, Socket } from "socket.io-client";
 
 // Ensure this matches your backend PORT
-const SOCKET_URL = "http://localhost:3007";
+const SOCKET_URL = "http://16.171.200.75";
 
 export const socket: Socket = io(SOCKET_URL, {
   withCredentials: true,

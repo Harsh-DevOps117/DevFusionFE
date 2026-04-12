@@ -14,8 +14,8 @@ import {
 import React, { useState } from "react";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
-import { setCredentials } from "../store/authSlice";
-import { api } from "../utils/api";
+import { setCredentials } from "../store/authSlice"; // Ensure this path is correct
+import { api } from "../utils/api"; // Ensure this path is correct
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -57,12 +57,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
         const response = await api.post(endpoint, payload);
 
-        if (response.status === 200 || response.status === 201) {
-          const { user, token } = response.data;
-          dispatch(setCredentials({ user, token }));
+        // Your backend returns: { success: true, accessToken: "...", user: {...} }
+        if (response.data.accessToken) {
+          const { user, accessToken } = response.data;
+
+          // Push to Redux (which also saves to LocalStorage)
+          dispatch(setCredentials({ user, accessToken }));
 
           toast.success(
-            mode === "login" ? "Login Sucessfully" : "Node Created.",
+            mode === "login" ? "Handshake Successful" : "Identity Registered",
             {
               icon: <Zap size={16} className="text-[#f97316]" />,
             },
@@ -98,6 +101,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     <AnimatePresence>
       {isOpen && (
         <>
+          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -106,14 +110,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             className="fixed inset-0 bg-black/90 backdrop-blur-md z-[200] cursor-pointer"
           />
 
+          {/* Modal Container */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[95%] max-w-[420px] bg-[#0d0d0d] border border-white/10 rounded-[2.5rem] p-8 sm:p-10 z-[210] overflow-hidden shadow-2xl"
           >
+            {/* Ambient Glow */}
             <div className="absolute top-[-20%] right-[-20%] w-64 h-64 bg-orange-600/10 blur-[80px] rounded-full pointer-events-none" />
 
+            {/* Close Button */}
             <button
               onClick={onClose}
               className="absolute top-6 right-6 text-white/30 hover:text-white transition-colors"
@@ -121,6 +128,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               <X size={24} />
             </button>
 
+            {/* Header */}
             <div className="text-center mb-8">
               <h2 className="text-white text-3xl font-machina-bold mb-2 tracking-tighter uppercase">
                 {mode === "login" && "Login_Node"}
@@ -136,6 +144,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               </p>
             </div>
 
+            {/* Form */}
             <form className="space-y-4" onSubmit={handleSubmit}>
               {mode === "signup" && (
                 <div className="relative">
@@ -242,6 +251,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               </button>
             </form>
 
+            {/* Switch Mode Footer */}
             <div className="flex items-center gap-4 my-8">
               <div className="h-[1px] flex-1 bg-white/5" />
               <span className="text-white/10 text-[9px] font-black uppercase tracking-[0.3em]">

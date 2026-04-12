@@ -1,29 +1,43 @@
 "use client";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "../store/store";
 
 interface PlanGateProps {
   children: React.ReactNode;
-  hideFor?: "PRO" | "FREE"; // Optional: flexibility to hide for anyone
+  showOnlyFor?: "PRO" | "FREE" | "BOTH";
 }
 
-/**
- * @description Gates content based on user plan.
- * Default behavior: Hides children if user is PRO.
- */
-const PlanGate: React.FC<PlanGateProps> = ({ children, hideFor = "PRO" }) => {
+const PlanGate: React.FC<PlanGateProps> = ({
+  children,
+  showOnlyFor = "PRO",
+}) => {
   const { user, isAuthenticated } = useSelector(
     (state: RootState) => state.auth,
   );
+  const [mounted, setMounted] = useState(false);
 
-  // Phase 1: Check if user exists and plan matches the restriction
-  const shouldHide = user?.plan === hideFor;
+  // 1. Prevent Hydration Mismatch (Next.js safety)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  // Phase 2: If hiding condition is met, return null (DOM will be empty)
-  if (shouldHide) return null;
+  if (!mounted) return null;
 
-  // Phase 3: Otherwise, render the internal nodes
+  // 2. Auth Check
+  if (!isAuthenticated || !user) return null;
+
+  // 3. Logic Flip:
+  // If we want BOTH, show it.
+  if (showOnlyFor === "BOTH") return <>{children}</>;
+
+  // If the user's plan DOES NOT match the required plan, hide it.
+  if (user.plan !== showOnlyFor) {
+    console.log(`Plan Mismatch: User is ${user.plan}, need ${showOnlyFor}`);
+    return null;
+  }
+
+  // 4. Success: User is PRO (or whatever was requested)
   return <>{children}</>;
 };
 

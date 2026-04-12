@@ -13,7 +13,7 @@ import * as pdfjs from "pdfjs-dist";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../App.css";
-import { api } from "../../utils/api";
+import api from "../../services/api";
 
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.mjs";
 

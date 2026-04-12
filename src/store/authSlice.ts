@@ -5,13 +5,15 @@ interface AuthState {
   user: any | null;
   token: string | null;
   isAuthenticated: boolean;
-  loading: boolean; // 🛡️ Added for Flicker-Protection
+  loading: boolean;
 }
 
+const isBrowser = typeof window !== "undefined";
+
 const initialState: AuthState = {
-  user: JSON.parse(localStorage.getItem("user") || "null"),
-  token: localStorage.getItem("token"),
-  isAuthenticated: !!localStorage.getItem("token"),
+  user: isBrowser ? JSON.parse(localStorage.getItem("user") || "null") : null,
+  token: isBrowser ? localStorage.getItem("token") : null,
+  isAuthenticated: isBrowser ? !!localStorage.getItem("token") : false,
   loading: false,
 };
 
@@ -21,34 +23,34 @@ const authSlice = createSlice({
   reducers: {
     setCredentials: (
       state,
-      action: PayloadAction<{ user: any; token: string }>,
+      action: PayloadAction<{ user: any; accessToken: string }>,
     ) => {
-      const { user, token } = action.payload;
+      const { user, accessToken } = action.payload;
       state.user = user;
-      state.token = token;
+      state.token = accessToken;
       state.isAuthenticated = true;
       state.loading = false;
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-    },
-    updateUser: (state, action: PayloadAction<any>) => {
-      state.user = action.payload;
-      localStorage.setItem("user", JSON.stringify(action.payload));
-    },
-    setAuthLoading: (state, action: PayloadAction<boolean>) => {
-      state.loading = action.payload;
+
+      // We save it as "token" so the API Interceptor can find it
+      if (isBrowser) {
+        localStorage.setItem("token", accessToken);
+        localStorage.setItem("user", JSON.stringify(user));
+      }
     },
     logout: (state) => {
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
-      state.loading = false;
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      if (isBrowser) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+      }
+    },
+    setAuthLoading: (state, action: PayloadAction<boolean>) => {
+      state.loading = action.payload;
     },
   },
 });
 
-export const { setCredentials, logout, setAuthLoading, updateUser } =
-  authSlice.actions;
+export const { setCredentials, logout, setAuthLoading } = authSlice.actions;
 export default authSlice.reducer;

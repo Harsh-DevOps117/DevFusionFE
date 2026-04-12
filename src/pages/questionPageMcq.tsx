@@ -1,5 +1,4 @@
 "use client";
-import axios from "axios";
 import {
   AlertTriangle,
   BrainCircuit,
@@ -10,12 +9,12 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { api } from "../utils/api";
 
-// ✅ AUTH-READY API INSTANCE
-const api = axios.create({
-  baseURL: "http://localhost:3007/v1",
-  withCredentials: true,
-});
+// const api = axios.create({
+//   baseURL: "http://16.171.200.75/v1",
+//   withCredentials: true,
+// });
 
 type Step = "setup" | "generating" | "active" | "result";
 type Difficulty = "easy" | "medium" | "hard";
@@ -31,7 +30,6 @@ export default function QuizPage() {
   const [score, setScore] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Timer State
   const [timeLeft, setTimeLeft] = useState(0);
   const [totalTime, setTotalTime] = useState(0);
 
