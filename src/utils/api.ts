@@ -37,7 +37,7 @@ export const executeCode = async (sourceCode: string, languageId: number) => {
   }
 };
 
-// const BASE_URL = "http://16.171.200.75/v1";
+// const BASE_URL = "http://prepgird.in/v1";
 
 // export const quizApi = {
 //   // From quizController (generation)
@@ -72,7 +72,7 @@ export const executeCode = async (sourceCode: string, languageId: number) => {
 
 // import axios from "axios";
 
-// const BASE_URL = "http://16.171.200.75/v1";
+// const BASE_URL = "http://prepgird.in/v1";
 
 // export const api = axios.create({
 //   baseURL: BASE_URL,
@@ -83,7 +83,7 @@ export const executeCode = async (sourceCode: string, languageId: number) => {
 // });
 
 export const api = axios.create({
-  baseURL: "http://16.171.200.75/v1",
+  baseURL: "http://prepgird.in/v1",
   withCredentials: true,
 });
 

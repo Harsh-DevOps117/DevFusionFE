@@ -2,7 +2,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://16.171.200.75/v1",
+  baseURL: "http://prepgird.in/v1",
   withCredentials: true,
 });
 
