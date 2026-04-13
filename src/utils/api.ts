@@ -37,7 +37,7 @@
 //   }
 // };
 
-// // const BASE_URL = "http://16.171.200.75/v1";
+// // const BASE_URL = "https://prepgrid.in/v1";
 
 // // export const quizApi = {
 // //   // From quizController (generation)
@@ -72,7 +72,7 @@
 
 // // import axios from "axios";
 
-// // const BASE_URL = "http://16.171.200.75/v1";
+// // const BASE_URL = "https://prepgrid.in/v1";
 
 // // export const api = axios.create({
 // //   baseURL: BASE_URL,
@@ -83,7 +83,7 @@
 // // });
 
 // export const api = axios.create({
-//   baseURL: "http://16.171.200.75/v1",
+//   baseURL: "https://prepgrid.in/v1",
 //   withCredentials: true,
 // });
 

@@ -26,7 +26,7 @@ interface EvaluationData {
 }
 
 axios.defaults.withCredentials = true;
-const SOCKET_URL = "http://16.171.200.75";
+const SOCKET_URL = "https://prepgrid.in";
 const socket: Socket = io(SOCKET_URL, { withCredentials: true });
 
 export default function InterviewDashboard() {

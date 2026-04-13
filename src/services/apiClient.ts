@@ -1,7 +1,7 @@
 // src/services/apiClient.ts
 import axios from "axios";
 
-const BASE_URL = "http://16.171.200.75/v1";
+const BASE_URL = "https://prepgrid.in/v1";
 
 // 1. Create the central instance (Removed the hardcoded Content-Type here)
 export const apiClient = axios.create({
