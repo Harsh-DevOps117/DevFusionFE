@@ -3,7 +3,9 @@
 import { ArrowLeft, BookOpen, List, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { deletePlaylist, getAllPlaylists } from "../services/api";
+
+// ✅ Import PlaylistService from our centralized index
+import { PlaylistService } from "../services/index";
 
 import AddProblemToPlaylistModal from "../components/AddProblemToPlaylistModal";
 import CreatePlaylistModal from "../components/CreatePlaylistModal";
@@ -17,7 +19,8 @@ export default function PlaylistsPage() {
 
   const fetchPlaylists = async () => {
     try {
-      const res = await getAllPlaylists();
+      // ✅ Use centralized service
+      const res = await PlaylistService.getAll();
       setPlaylists(res.data.playlists || []);
     } catch (err) {
       console.error(err);
@@ -34,8 +37,13 @@ export default function PlaylistsPage() {
     );
     if (!confirmDelete) return;
 
-    await deletePlaylist(id);
-    fetchPlaylists();
+    try {
+      // ✅ Use centralized service
+      await PlaylistService.delete(id);
+      fetchPlaylists();
+    } catch (err) {
+      console.error("Failed to delete playlist:", err);
+    }
   };
 
   return (
@@ -102,7 +110,7 @@ export default function PlaylistsPage() {
                 {/* Delete Button */}
                 <button
                   onClick={() => handleDelete(p.id)}
-                  className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center text-red-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all hover:bg-white/10 rounded-xl"
+                  className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center text-red-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all hover:bg-white/10 rounded-xl z-10"
                 >
                   <Trash2 size={18} />
                 </button>
@@ -137,7 +145,7 @@ export default function PlaylistsPage() {
                     e.stopPropagation();
                     setOpenModal(p.id);
                   }}
-                  className="mt-6 w-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#f97316]/30 py-3.5 rounded-2xl text-sm font-medium text-[#f97316] transition-all"
+                  className="mt-6 w-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#f97316]/30 py-3.5 rounded-2xl text-sm font-medium text-[#f97316] transition-all relative z-10"
                 >
                   + ADD PROBLEMS
                 </button>

@@ -1,11 +1,13 @@
 "use client";
 
-import { HardDrive, Timer, Zap } from "lucide-react"; // 🔥 Added for stats icons
+import { HardDrive, Timer, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { toast } from "react-toastify"; // 🔥 Added
+import { toast } from "react-toastify";
 import CodeEditor from "../components/CodeEditor";
-import { executeCode, getProblemById } from "../services/api";
+
+// ✅ 1. Import from our centralized services
+import { ProblemService, SubmissionService } from "../services/index";
 
 export default function ProblemSolvePage() {
   const { id } = useParams();
@@ -56,7 +58,9 @@ export default function ProblemSolvePage() {
 
   useEffect(() => {
     if (!id) return;
-    getProblemById(id)
+
+    // ✅ 2. Use ProblemService
+    ProblemService.getById(id)
       .then((res) => {
         const prob = res.data.problem;
         setProblem(prob);
@@ -69,7 +73,7 @@ export default function ProblemSolvePage() {
         }
       })
       .catch(console.error);
-  }, [id]);
+  }, [id, language]); // Added language to dependency array just in case
 
   useEffect(() => {
     if (!problem) return;
@@ -78,7 +82,7 @@ export default function ProblemSolvePage() {
     } else if (problem?.referenceSolutions?.[language]) {
       setCode(problem.referenceSolutions[language]);
     }
-  }, [language]);
+  }, [language, problem]);
 
   const runCode = async () => {
     try {
@@ -93,7 +97,8 @@ export default function ProblemSolvePage() {
 
       toast.info("Executing neural testcases...", { autoClose: 1500 });
 
-      const res = await executeCode({
+      // ✅ 3. Use SubmissionService.execute
+      const res = await SubmissionService.execute({
         source_code: code,
         language_id: languageMap[language],
         stdin: testcases.map((t: any) => t.input),
@@ -120,7 +125,8 @@ export default function ProblemSolvePage() {
       setLoading(true);
       setResults(null);
 
-      const res = await executeCode({
+      // ✅ 4. Use SubmissionService.execute
+      const res = await SubmissionService.execute({
         source_code: code,
         language_id: languageMap[language],
         stdin: testcases.map((t: any) => t.input),

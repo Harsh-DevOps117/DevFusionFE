@@ -3,24 +3,22 @@ import {
   AlertTriangle,
   BrainCircuit,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Layers,
   Terminal,
   Trophy,
+  XCircle,
   Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { api } from "../utils/api";
 
-// const api = axios.create({
-//   baseURL: "http://16.171.200.75/v1",
-//   withCredentials: true,
-// });
+import { QuizService } from "../services/index";
 
 type Step = "setup" | "generating" | "active" | "result";
 type Difficulty = "easy" | "medium" | "hard";
 
 export default function QuizPage() {
-  // State Management
   const [step, setStep] = useState<Step>("setup");
   const [topic, setTopic] = useState("");
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
@@ -29,16 +27,18 @@ export default function QuizPage() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [score, setScore] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [timeLeft, setTimeLeft] = useState(0);
   const [totalTime, setTotalTime] = useState(0);
+  const [expandedExplanations, setExpandedExplanations] = useState<
+    Record<string, boolean>
+  >({});
 
   // --- 1. INITIAL GENERATION ---
   const handleGenerate = async () => {
     if (!topic.trim()) return;
     setStep("generating");
     try {
-      const res = await api.post("/generate", { topic, difficulty });
+      const res = await QuizService.generate({ topic, difficulty });
       const id = res.data.data?.jobId;
       if (id) setJobId(id);
       else throw new Error("Job ID missing");
@@ -50,16 +50,16 @@ export default function QuizPage() {
 
   // --- 2. POLLING ENGINE ---
   useEffect(() => {
-    let interval: any;
+    let interval: ReturnType<typeof setInterval>;
     if (step === "generating" && jobId) {
       interval = setInterval(async () => {
         try {
-          const res = await api.get(`/status/${jobId}`);
+          const res = await QuizService.getStatus(jobId);
           if (res.data.success && res.data.data.state === "completed") {
             clearInterval(interval);
             const qId = res.data.data.result?.quizId;
             if (qId) {
-              const quizRes = await api.get(`/${qId}`);
+              const quizRes = await QuizService.getQuiz(qId);
               const data = quizRes.data.data || quizRes.data;
               setQuizData(data);
               setTotalTime(data.questions.length * 30);
@@ -98,17 +98,29 @@ export default function QuizPage() {
     }));
 
     try {
-      const res = await api.post("/submit", {
+      const res = await QuizService.submit({
         quizId: quizData.id,
         answers: formatted,
       });
       setScore(res.data.data.score);
+
+      // In case the API returns the graded questions with the true answers now visible
+      if (res.data.data.quiz) {
+        setQuizData(res.data.data.quiz);
+      } else if (res.data.data.questions) {
+        setQuizData({ ...quizData, questions: res.data.data.questions });
+      }
+
       setStep("result");
     } catch (err) {
       alert("Evaluation failed.");
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const toggleExplanation = (id: string) => {
+    setExpandedExplanations((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   const timerPct = totalTime > 0 ? (timeLeft / totalTime) * 100 : 0;
@@ -138,7 +150,6 @@ export default function QuizPage() {
 
             <h2 className="text-3xl font-extrabold text-white tracking-tighter leading-tight mb-2">
               PrepGrid MCQ
-              <br />
             </h2>
             <p className="text-[9px] font-bold text-white/20 uppercase tracking-[0.4em] mb-10">
               Automated Assessment Synthesis
@@ -187,7 +198,7 @@ export default function QuizPage() {
                       onClick={() => setDifficulty(d.id as Difficulty)}
                       className={`flex flex-col items-center gap-1.5 p-4 rounded-2xl border transition-all ${
                         difficulty === d.id
-                          ? `bg-white/5 border-[${d.color}]/50`
+                          ? "bg-white/5"
                           : "bg-[#0a0a0a] border-white/5 hover:border-white/10"
                       }`}
                       style={{
@@ -294,9 +305,10 @@ export default function QuizPage() {
               <div className="w-px h-8 bg-white/5" />
               <button
                 onClick={handleSubmit}
-                className="bg-[#f97316] text-black px-6 py-2.5 rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-white transition-all active:scale-95"
+                disabled={isSubmitting}
+                className="bg-[#f97316] text-black px-6 py-2.5 rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-white transition-all active:scale-95 disabled:opacity-50"
               >
-                Commit_Now
+                {isSubmitting ? "Evaluating..." : "Commit_Now"}
               </button>
             </div>
           </header>
@@ -323,12 +335,16 @@ export default function QuizPage() {
             </div>
           </div>
 
-          {/* FEED */}
+          {/* QUESTION FEED */}
           <div className="space-y-3">
             {quizData.questions.map((q: any, i: number) => (
               <div
                 key={q.id}
-                className={`p-10 rounded-[2.5rem] border transition-all duration-500 ${answers[q.id] ? "bg-[#0a0a0a] border-white/10" : "bg-[#080808] border-white/5"}`}
+                className={`p-10 rounded-[2.5rem] border transition-all duration-500 ${
+                  answers[q.id]
+                    ? "bg-[#0a0a0a] border-white/10"
+                    : "bg-[#080808] border-white/5"
+                }`}
               >
                 <div className="flex justify-between items-center mb-6">
                   <div className="flex items-center gap-2">
@@ -359,7 +375,11 @@ export default function QuizPage() {
                     >
                       <span>{opt}</span>
                       <div
-                        className={`w-4 h-4 rounded-full border flex items-center justify-center ${answers[q.id] === opt ? "border-black/20" : "border-white/10"}`}
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                          answers[q.id] === opt
+                            ? "border-black/20"
+                            : "border-white/10"
+                        }`}
                       >
                         {answers[q.id] === opt && (
                           <div className="w-2 h-2 bg-black rounded-full" />
@@ -390,31 +410,259 @@ export default function QuizPage() {
   // ==========================================
   // RENDER: RESULT
   // ==========================================
-  if (step === "result")
-    return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center p-6 font-['fontNormal']">
-        <div className="w-full max-w-[460px] bg-[#0d0d0d] border border-white/10 rounded-[48px] p-16 text-center relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-[#f97316] to-transparent" />
-          <div className="w-16 h-16 bg-[#f97316]/10 border border-[#f97316]/20 rounded-2xl flex items-center justify-center mx-auto mb-10">
-            <Trophy size={32} className="text-[#f97316]" />
-          </div>
-          <h1 className="text-[120px] font-black italic italic leading-none tracking-tighter text-white">
-            {score}
-          </h1>
-          <p className="text-[#f97316] text-[10px] font-bold tracking-[0.6em] uppercase mt-2">
-            System_Efficiency_%
-          </p>
+  if (step === "result" && quizData) {
+    const totalQ = quizData.questions.length;
 
-          <div className="mt-12 flex gap-3">
+    // Normalize strings for calculating correct counts to avoid spacing issues
+    const correctCount = quizData.questions.filter((q: any) => {
+      const uAns = String(answers[q.id] || "")
+        .trim()
+        .toLowerCase();
+      const cAns = String(q.correctAnswer || "")
+        .trim()
+        .toLowerCase();
+      return uAns === cAns && uAns !== "";
+    }).length;
+
+    const wrongCount = totalQ - correctCount;
+
+    return (
+      <div className="min-h-screen bg-[#050505] text-white p-6 py-12 font-['fontNormal']">
+        <div className="max-w-[720px] mx-auto space-y-4">
+          {/* ── SCORE CARD ── */}
+          <div className="bg-[#0d0d0d] border border-white/10 rounded-[48px] p-12 text-center relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-[#f97316] to-transparent" />
+
+            <div className="w-16 h-16 bg-[#f97316]/10 border border-[#f97316]/20 rounded-2xl flex items-center justify-center mx-auto mb-8">
+              <Trophy size={32} className="text-[#f97316]" />
+            </div>
+
+            <h1 className="text-[100px] font-black italic leading-none tracking-tighter text-white">
+              {score}
+            </h1>
+            <p className="text-[#f97316] text-[10px] font-bold tracking-[0.6em] uppercase mt-2 mb-8">
+              System_Efficiency_%
+            </p>
+
+            {/* STAT PILLS */}
+            <div className="flex justify-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-2">
+                <CheckCircle2 size={13} className="text-green-400" />
+                <span className="text-green-400 text-[11px] font-bold uppercase tracking-widest">
+                  {correctCount} Correct
+                </span>
+              </div>
+              <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2">
+                <XCircle size={13} className="text-red-400" />
+                <span className="text-red-400 text-[11px] font-bold uppercase tracking-widest">
+                  {wrongCount} Wrong
+                </span>
+              </div>
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2">
+                <Layers size={13} className="text-white/40" />
+                <span className="text-white/40 text-[11px] font-bold uppercase tracking-widest">
+                  {totalQ} Total
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* ── SECTION LABEL ── */}
+          <div className="flex items-center gap-3 px-2 pt-4">
+            <Terminal size={12} className="text-[#f97316]/60" />
+            <span className="text-[9px] font-bold text-white/30 uppercase tracking-[0.4em]">
+              Answer_Review_Log
+            </span>
+            <div className="flex-1 h-px bg-white/5" />
+          </div>
+
+          {/* ── ANSWER REVIEW CARDS ── */}
+          <div className="space-y-3">
+            {quizData.questions.map((q: any, i: number) => {
+              // Normalize strings to check for truthiness, ignoring exact spaces/cases
+              const userAnswerRaw = answers[q.id] || "";
+              const correctRaw = q.correctAnswer || "";
+
+              const userAnswerNorm = String(userAnswerRaw).trim().toLowerCase();
+              const correctNorm = String(correctRaw).trim().toLowerCase();
+
+              const isSkipped = !userAnswerRaw;
+              const isCorrect = !isSkipped && userAnswerNorm === correctNorm;
+              const isExpanded = expandedExplanations[q.id];
+
+              return (
+                <div
+                  key={q.id}
+                  className={`rounded-3xl border overflow-hidden transition-all duration-300 ${
+                    isCorrect
+                      ? "bg-green-500/[0.04] border-green-500/15"
+                      : isSkipped
+                        ? "bg-white/[0.02] border-white/8"
+                        : "bg-red-500/[0.04] border-red-500/15"
+                  }`}
+                >
+                  {/* CARD HEADER */}
+                  <div className="p-6 pb-4">
+                    <div className="flex items-start justify-between gap-4 mb-4">
+                      <div className="flex items-center gap-2.5">
+                        {/* STATUS ICON */}
+                        {isCorrect ? (
+                          <div className="w-7 h-7 rounded-xl bg-green-500/15 flex items-center justify-center flex-shrink-0">
+                            <CheckCircle2
+                              size={14}
+                              className="text-green-400"
+                            />
+                          </div>
+                        ) : isSkipped ? (
+                          <div className="w-7 h-7 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">
+                            <AlertTriangle
+                              size={14}
+                              className="text-white/20"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-7 h-7 rounded-xl bg-red-500/15 flex items-center justify-center flex-shrink-0">
+                            <XCircle size={14} className="text-red-400" />
+                          </div>
+                        )}
+
+                        <span
+                          className={`text-[9px] font-bold uppercase tracking-[0.4em] ${
+                            isCorrect
+                              ? "text-green-400/60"
+                              : isSkipped
+                                ? "text-white/20"
+                                : "text-red-400/60"
+                          }`}
+                        >
+                          {isCorrect
+                            ? "Correct"
+                            : isSkipped
+                              ? "Skipped"
+                              : "Incorrect"}{" "}
+                          · Node_{String(i + 1).padStart(2, "0")}
+                        </span>
+                      </div>
+
+                      {/* EXPAND EXPLANATION TOGGLE */}
+                      {q.explanation && (
+                        <button
+                          onClick={() => toggleExplanation(q.id)}
+                          className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-[#f97316]/60 hover:text-[#f97316] transition-colors flex-shrink-0"
+                        >
+                          {isExpanded ? (
+                            <>
+                              Hide <ChevronUp size={12} />
+                            </>
+                          ) : (
+                            <>
+                              Explain <ChevronDown size={12} />
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* QUESTION TEXT */}
+                    <p className="text-base font-medium text-white/80 leading-relaxed mb-5">
+                      {q.question}
+                    </p>
+
+                    {/* OPTIONS */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {q.options.map((opt: string) => {
+                        // Normalize option text for styling matching
+                        const optNorm = String(opt).trim().toLowerCase();
+                        const isUserChoice = userAnswerNorm === optNorm;
+                        const isCorrectOption = correctNorm === optNorm;
+
+                        let optStyle =
+                          "bg-black/20 border-white/5 text-white/20";
+                        if (isCorrectOption && isUserChoice) {
+                          optStyle =
+                            "bg-green-500/15 border-green-500/40 text-green-300";
+                        } else if (isCorrectOption && !isUserChoice) {
+                          optStyle =
+                            "bg-green-500/10 border-green-500/30 text-green-400/80 border-dashed";
+                        } else if (isUserChoice && !isCorrectOption) {
+                          optStyle =
+                            "bg-red-500/15 border-red-500/40 text-red-300 line-through decoration-red-500/50";
+                        }
+
+                        return (
+                          <div
+                            key={opt}
+                            className={`p-4 rounded-2xl border text-sm font-bold flex justify-between items-center transition-all ${optStyle}`}
+                          >
+                            <span>{opt}</span>
+                            <div className="flex items-center gap-1.5">
+                              {isCorrectOption && isUserChoice && (
+                                <CheckCircle2
+                                  size={13}
+                                  className="text-green-400"
+                                />
+                              )}
+                              {isCorrectOption && !isUserChoice && (
+                                <CheckCircle2
+                                  size={13}
+                                  className="text-green-400/60"
+                                />
+                              )}
+                              {isUserChoice && !isCorrectOption && (
+                                <XCircle size={13} className="text-red-400" />
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* CORRECT ANSWER CALLOUT (only for wrong/skipped) */}
+                  {!isCorrect && correctRaw && (
+                    <div className="mx-6 mb-4 px-4 py-3 bg-green-500/8 border border-green-500/15 rounded-2xl flex items-center gap-3">
+                      <CheckCircle2
+                        size={13}
+                        className="text-green-400 flex-shrink-0"
+                      />
+                      <div>
+                        <span className="text-[9px] font-bold text-green-400/50 uppercase tracking-widest block mb-0.5">
+                          Correct_Answer
+                        </span>
+                        <span className="text-sm font-bold text-green-400">
+                          {correctRaw}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* EXPLANATION PANEL */}
+                  {q.explanation && isExpanded && (
+                    <div className="mx-6 mb-5 px-5 py-4 bg-[#f97316]/5 border border-[#f97316]/15 rounded-2xl">
+                      <p className="text-[9px] font-bold text-[#f97316]/50 uppercase tracking-widest mb-2">
+                        Explanation
+                      </p>
+                      <p className="text-sm text-white/50 leading-relaxed">
+                        {q.explanation}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ── ACTION BUTTONS ── */}
+          <div className="flex gap-3 pt-4">
             <button
               onClick={() => window.location.reload()}
-              className="flex-1 py-4 bg-white text-black rounded-2xl font-bold uppercase text-[10px] tracking-widest hover:bg-[#f97316] hover:text-white transition-all"
+              className="flex-1 py-4 bg-white text-black rounded-2xl font-bold uppercase text-[10px] tracking-widest hover:bg-[#f97316] hover:text-white transition-all active:scale-95"
             >
               New_Session
             </button>
             <button
               onClick={() => (window.location.href = "/")}
-              className="flex-1 py-4 bg-white/5 border border-white/10 text-white rounded-2xl font-bold uppercase text-[10px] tracking-widest hover:bg-white/10 transition-all"
+              className="flex-1 py-4 bg-white/5 border border-white/10 text-white rounded-2xl font-bold uppercase text-[10px] tracking-widest hover:bg-white/10 transition-all active:scale-95"
             >
               Exit_Lab
             </button>
@@ -422,6 +670,7 @@ export default function QuizPage() {
         </div>
       </div>
     );
+  }
 
   return null;
 }

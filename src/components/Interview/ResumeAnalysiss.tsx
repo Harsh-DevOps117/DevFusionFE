@@ -13,11 +13,10 @@ import * as pdfjs from "pdfjs-dist";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../App.css";
-import api from "../../services/api";
+
+import { ResumeService } from "../../services/index";
 
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.mjs";
-
-const RESUME_BASE_URL = "/resume"; // Ensure your axios instance appends the base URL correctly
 
 export default function ResumePivot() {
   const navigate = useNavigate();
@@ -78,7 +77,7 @@ export default function ResumePivot() {
     }
 
     try {
-      const res = await api.post(`${RESUME_BASE_URL}/analyze`, payload);
+      const res = await ResumeService.analyze(payload);
       setJobId(res.data.data.jobId);
     } catch (err: any) {
       setLoading(false);
@@ -87,13 +86,15 @@ export default function ResumePivot() {
   };
 
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
+    let interval: ReturnType<typeof setInterval> | null = null;
     if (jobId && !result) {
       interval = setInterval(async () => {
         try {
-          const res = await api.get(`${RESUME_BASE_URL}/status/${jobId}`);
+          const res = await ResumeService.getStatus(jobId);
           const job = res.data.data;
+
           if (job.progress) setProgress(job.progress);
+
           if (job.state === "completed" && job.result) {
             setResult(job.result);
             setLoading(false);

@@ -14,7 +14,9 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../utils/api";
+
+// ✅ 1. Import LeaderboardService
+import { LeaderboardService } from "../services/index";
 
 interface Leader {
   id: string | number;
@@ -34,7 +36,8 @@ export default function Leaderboard() {
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        const res = await api.get("/leader");
+        // ✅ 2. Use the centralized service
+        const res = await LeaderboardService.getLeaderboard();
         if (res.data.success) {
           const { top10: fetchedTop10, user: fetchedUser } = res.data.data;
           setTop10(fetchedTop10 || []);

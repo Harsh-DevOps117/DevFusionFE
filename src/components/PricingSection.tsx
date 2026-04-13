@@ -2,8 +2,10 @@
 import { motion } from "framer-motion";
 import { CheckCircle2, Loader2, MoveRight, Zap } from "lucide-react";
 import React, { useState } from "react";
-import { toast } from "react-toastify"; // 🔥 Added
-import { createOrder, verifyPayment } from "../services/paymentService";
+import { toast } from "react-toastify";
+
+// ✅ 1. Point to our centralized services
+import { PaymentService } from "../services/index";
 import { loadRazorpayScript, openRazorpay } from "../services/razorpay";
 
 const plans = [
@@ -89,8 +91,9 @@ const PricingSection: React.FC = () => {
       }
 
       // 2. Create Order
-      const data = await createOrder(amount);
-      const order = data.order;
+      // ✅ Unpacking the Axios response (.data)
+      const res = await PaymentService.createOrder(amount);
+      const order = res.data.order;
 
       // 3. Open Checkout
       openRazorpay({
@@ -102,13 +105,14 @@ const PricingSection: React.FC = () => {
         order_id: order.id,
 
         handler: async function (response: any) {
-          const verifyRes = await verifyPayment({
+          // ✅ Unpacking the Axios response (.data)
+          const verifyRes = await PaymentService.verifyPayment({
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature,
           });
 
-          if (verifyRes.success) {
+          if (verifyRes.data.success) {
             toast.success("Success Access Granted.", {
               theme: "dark",
               icon: <Zap size={18} className="text-[#f97316]" />,

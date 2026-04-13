@@ -1,8 +1,16 @@
 import type { PayloadAction } from "@reduxjs/toolkit";
 import { createSlice } from "@reduxjs/toolkit";
 
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  plan: string;
+}
+
 interface AuthState {
-  user: any | null;
+  user: User | null;
   token: string | null;
   isAuthenticated: boolean;
   loading: boolean;
@@ -12,8 +20,8 @@ const isBrowser = typeof window !== "undefined";
 
 const initialState: AuthState = {
   user: isBrowser ? JSON.parse(localStorage.getItem("user") || "null") : null,
-  token: isBrowser ? localStorage.getItem("token") : null,
-  isAuthenticated: isBrowser ? !!localStorage.getItem("token") : false,
+  token: isBrowser ? localStorage.getItem("accessToken") : null,
+  isAuthenticated: isBrowser ? !!localStorage.getItem("accessToken") : false,
   loading: false,
 };
 
@@ -23,7 +31,7 @@ const authSlice = createSlice({
   reducers: {
     setCredentials: (
       state,
-      action: PayloadAction<{ user: any; accessToken: string }>,
+      action: PayloadAction<{ user: User; accessToken: string }>,
     ) => {
       const { user, accessToken } = action.payload;
       state.user = user;
@@ -31,9 +39,8 @@ const authSlice = createSlice({
       state.isAuthenticated = true;
       state.loading = false;
 
-      // We save it as "token" so the API Interceptor can find it
       if (isBrowser) {
-        localStorage.setItem("token", accessToken);
+        localStorage.setItem("accessToken", accessToken);
         localStorage.setItem("user", JSON.stringify(user));
       }
     },
@@ -42,7 +49,7 @@ const authSlice = createSlice({
       state.token = null;
       state.isAuthenticated = false;
       if (isBrowser) {
-        localStorage.removeItem("token");
+        localStorage.removeItem("accessToken");
         localStorage.removeItem("user");
       }
     },

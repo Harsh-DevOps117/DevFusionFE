@@ -16,7 +16,9 @@ import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { logout } from "../store/authSlice";
-import { api } from "../utils/api";
+
+// ✅ Import our centralized services
+import { AuthService, UserService } from "../services/index";
 
 export default function UserProfile() {
   const [user, setUser] = useState<any>(null);
@@ -27,7 +29,8 @@ export default function UserProfile() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await api.get("/user/profile");
+        // ✅ Use centralized UserService
+        const res = await UserService.getProfile();
         if (res.data.success) setUser(res.data.data);
       } catch (err) {
         console.error(err);
@@ -41,7 +44,8 @@ export default function UserProfile() {
 
   const handleLogout = async () => {
     try {
-      await api.post("/logout");
+      // ✅ Use centralized AuthService
+      await AuthService.logout();
     } catch (err) {
       console.error(err);
     } finally {

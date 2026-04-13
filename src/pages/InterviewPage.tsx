@@ -14,14 +14,49 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import MonacoSandbox from "../components/Interview/MonacoSandbox";
-import { api } from "../utils/api";
+import { InterviewService } from "../services/index";
 import { socket } from "../utils/socket";
+
+// ── Speaking indicator ─────────────────────────────────────────
+const SpeakingBars = ({ active }: { active: boolean }) => (
+  <div
+    style={{
+      display: "flex",
+      alignItems: "flex-end",
+      gap: 3,
+      height: 24,
+      padding: "3px 5px",
+    }}
+  >
+    {[0, 0.12, 0.24, 0.36, 0.48].map((delay, i) => (
+      <div
+        key={i}
+        style={{
+          width: 4,
+          borderRadius: 2,
+          background: "#f97316",
+          transformOrigin: "bottom",
+          height: active ? undefined : 4,
+          opacity: active ? 1 : 0.2,
+          animation: active
+            ? `speakBounce 0.8s ease-in-out infinite ${delay}s`
+            : "none",
+        }}
+      />
+    ))}
+    <style>{`
+      @keyframes speakBounce {
+        0%,100% { height: 4px; opacity: 0.4; }
+        50%      { height: 20px; opacity: 1; }
+      }
+    `}</style>
+  </div>
+);
 
 export default function InterviewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // State Management
   const [messages, setMessages] = useState<any[]>([]);
   const [evaluation, setEvaluation] = useState<any>(null);
   const [showEditor, setShowEditor] = useState(false);
@@ -33,18 +68,16 @@ export default function InterviewPage() {
   const [isCameraOff, setIsCameraOff] = useState(false);
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  // NEW: tracks whether the user's voice is actively being detected
+  const [isUserSpeaking, setIsUserSpeaking] = useState(false);
 
-  // Refs for Hardware and Engines
   const userVideoRef = useRef<HTMLVideoElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // NEW: Audio Ref to kill AI speech on hangup
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Sync state to refs for engine callbacks
   const isAiSpeakingRef = useRef(false);
   const isListeningRef = useRef(false);
   const inputTextRef = useRef("");
@@ -64,11 +97,9 @@ export default function InterviewPage() {
     idRef.current = id;
   }, [id]);
 
-  // ==========================================
-  // CLEAN TEARDOWN — The Kill Switch
-  // ==========================================
+  // ── TEARDOWN ────────────────────────────────────────────────
   const teardown = useCallback(() => {
-    // 1. Kill AI Audio immediately
+    // 1. Kill AI audio
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current.src = "";
@@ -78,28 +109,31 @@ export default function InterviewPage() {
     // 2. Kill silence timer
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
 
-    // 3. Stop speech recognition
+    // 3. Stop speech recognition — wipe handlers first so onend doesn't restart it
     if (recognitionRef.current) {
       recognitionRef.current.onend = null;
       recognitionRef.current.onerror = null;
       recognitionRef.current.onresult = null;
       try {
         recognitionRef.current.stop();
-      } catch (e) {
-        /* already stopped */
-      }
+      } catch (_) {}
     }
 
-    // 4. Stop all hardware tracks
-    streamRef.current?.getTracks().forEach((t) => t.stop());
+    // 4. Stop ALL hardware tracks (camera + mic)
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    if (userVideoRef.current) userVideoRef.current.srcObject = null;
 
-    // 5. Socket Cleanup
+    // 5. Socket cleanup
     socket.emit("leave-interview");
     socket.off("audio-chunk");
     socket.off("interview-complete");
 
     setIsAiSpeaking(false);
     setIsListening(false);
+    setIsUserSpeaking(false);
   }, []);
 
   const endCall = useCallback(() => {
@@ -107,9 +141,7 @@ export default function InterviewPage() {
     navigate("/profile");
   }, [teardown, navigate]);
 
-  // ==========================================
-  // SEND MESSAGE LOGIC
-  // ==========================================
+  // ── SEND MESSAGE ────────────────────────────────────────────
   const handleSendMessage = useCallback(async (textOverride?: string) => {
     const finalMsg = (textOverride ?? inputTextRef.current).trim();
     if (!finalMsg) return;
@@ -117,13 +149,14 @@ export default function InterviewPage() {
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     finalTranscriptRef.current = "";
     setInputText("");
+    setIsUserSpeaking(false);
 
     setMessages((prev) => [...prev, { sender: "You", text: finalMsg }]);
     setIsAiSpeaking(true);
 
     try {
-      await api.post("/respond", {
-        interviewId: idRef.current,
+      await InterviewService.respond({
+        interviewId: idRef.current as string,
         userInput: finalMsg,
       });
     } catch {
@@ -131,9 +164,7 @@ export default function InterviewPage() {
     }
   }, []);
 
-  // ==========================================
-  // SPEECH RECOGNITION SETUP
-  // ==========================================
+  // ── SPEECH RECOGNITION ──────────────────────────────────────
   useEffect(() => {
     const SpeechRecognition =
       (window as any).SpeechRecognition ||
@@ -144,6 +175,8 @@ export default function InterviewPage() {
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-US";
+    // maxAlternatives helps pick the best transcript
+    recognition.maxAlternatives = 1;
 
     recognition.onresult = (event: any) => {
       if (isAiSpeakingRef.current) return;
@@ -151,19 +184,44 @@ export default function InterviewPage() {
       let interimText = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
-        if (result.isFinal)
+        if (result.isFinal) {
           finalTranscriptRef.current += result[0].transcript + " ";
-        else interimText += result[0].transcript;
+        } else {
+          interimText += result[0].transcript;
+        }
       }
 
-      setInputText((finalTranscriptRef.current + interimText).trim());
+      const combined = (finalTranscriptRef.current + interimText).trim();
+      setInputText(combined);
+
+      // Show the speaking indicator whenever there's any activity
+      setIsUserSpeaking(combined.length > 0);
 
       if (finalTranscriptRef.current.trim().length > 0) {
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = setTimeout(() => {
           const toSend = finalTranscriptRef.current.trim();
-          if (toSend.length > 2) handleSendMessage(toSend);
+          if (toSend.length > 2) {
+            setIsUserSpeaking(false);
+            handleSendMessage(toSend);
+          }
         }, 1800);
+      }
+    };
+
+    recognition.onspeechstart = () => setIsUserSpeaking(true);
+    recognition.onspeechend = () => setIsUserSpeaking(false);
+
+    recognition.onerror = (e: any) => {
+      // "no-speech" is a normal timeout, not a real error — just restart
+      if (
+        e.error === "no-speech" &&
+        isListeningRef.current &&
+        !isAiSpeakingRef.current
+      ) {
+        try {
+          recognition.start();
+        } catch (_) {}
       }
     };
 
@@ -171,9 +229,9 @@ export default function InterviewPage() {
       if (isListeningRef.current && !isAiSpeakingRef.current) {
         try {
           recognition.start();
-        } catch (e) {
-          /* ignore */
-        }
+        } catch (_) {}
+      } else {
+        setIsUserSpeaking(false);
       }
     };
 
@@ -190,21 +248,18 @@ export default function InterviewPage() {
       finalTranscriptRef.current = "";
       recognitionRef.current?.stop();
       setIsListening(false);
+      setIsUserSpeaking(false);
       setInputText("");
     } else {
       finalTranscriptRef.current = "";
       setIsListening(true);
       try {
         recognitionRef.current?.start();
-      } catch (e) {
-        /* ignore */
-      }
+      } catch (_) {}
     }
   }, []);
 
-  // ==========================================
-  // SOCKET & AUDIO LOGIC
-  // ==========================================
+  // ── SOCKET & AUDIO ──────────────────────────────────────────
   useEffect(() => {
     if (!id) return;
     socket.emit("join-interview", id);
@@ -218,13 +273,11 @@ export default function InterviewPage() {
       }
 
       if (data.audio) {
-        // Kill existing audio before playing new chunk
-        if (currentAudioRef.current) {
-          currentAudioRef.current.pause();
-        }
+        if (currentAudioRef.current) currentAudioRef.current.pause();
 
         recognitionRef.current?.stop();
         setIsAiSpeaking(true);
+        setIsUserSpeaking(false);
 
         const audio = new Audio(`data:audio/mp3;base64,${data.audio}`);
         currentAudioRef.current = audio;
@@ -237,9 +290,7 @@ export default function InterviewPage() {
             setTimeout(() => {
               try {
                 recognitionRef.current?.start();
-              } catch (e) {
-                /* ignore */
-              }
+              } catch (_) {}
             }, 300);
           }
         };
@@ -271,11 +322,8 @@ export default function InterviewPage() {
     [messages],
   );
 
-  // ==========================================
-  // RENDER LOGIC
-  // ==========================================
+  // ── VIEWS ────────────────────────────────────────────────────
 
-  // 1. Role Selection View
   if (!id)
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
@@ -293,8 +341,12 @@ export default function InterviewPage() {
           <button
             onClick={async () => {
               setIsStarting(true);
-              const res = await api.post("/start", { role: targetRole });
-              navigate(`/interview/${res.data.id}`);
+              try {
+                const res = await InterviewService.start({ role: targetRole });
+                navigate(`/interview/${res.data.id}`);
+              } catch {
+                setIsStarting(false);
+              }
             }}
             className="w-full py-5 bg-[#f97316] text-black rounded-2xl font-black mt-6 tracking-widest uppercase hover:bg-orange-500 transition-all active:scale-95"
           >
@@ -308,30 +360,257 @@ export default function InterviewPage() {
       </div>
     );
 
+  //
   // 2. Evaluation View
-  if (evaluation)
+  // 2. Evaluation View
+  if (evaluation) {
+    const raw: string =
+      typeof evaluation === "string"
+        ? evaluation
+        : (evaluation.evaluation ?? "");
+
+    // ── parse helpers ──────────────────────────────────────────
+    const getScore = () => {
+      const m = raw.match(/Overall Score[:\s*]*([0-9.]+)\s*\/\s*10/i);
+      return m ? m[1] : (evaluation.totalScore ?? "—");
+    };
+
+    const getHire = () => {
+      const m = raw.match(/Hire Recommendation[:\s*]*(.*)/i);
+      if (!m) return null;
+      const val = m[1].replace(/[*#]/g, "").trim();
+      const isHire = /yes hire|✅/i.test(val);
+      return { label: isHire ? "Hire" : "No Hire", yes: isHire };
+    };
+
+    const getMeta = () => {
+      const m = raw.match(/Interview Report[^·\n]*[—-]\s*(.*)/i);
+      return m ? m[1].replace(/[*#]/g, "").trim() : "";
+    };
+
+    const getTable = () => {
+      const rows: {
+        phase: string;
+        topic: string;
+        score: string;
+        signal: string;
+      }[] = [];
+      const lines = raw.split("\n");
+      let inTable = false;
+      for (const line of lines) {
+        if (/\|\s*#\s*\|/i.test(line)) {
+          inTable = true;
+          continue;
+        }
+        if (/\|[-\s|]+\|/.test(line)) continue;
+        if (inTable && line.trim().startsWith("|")) {
+          const cols = line
+            .split("|")
+            .map((c) => c.trim())
+            .filter(Boolean);
+          if (cols.length >= 4) {
+            rows.push({
+              phase: cols[0],
+              topic: cols[1],
+              score: cols[2],
+              signal: cols[3],
+            });
+          }
+        } else if (inTable && !line.trim().startsWith("|")) {
+          inTable = false;
+        }
+      }
+      return rows;
+    };
+
+    const getSection = (heading: string) => {
+      const re = new RegExp(`###?\\s*${heading}[\\s\\S]*?(?=###|$)`, "i");
+      const m = raw.match(re);
+      if (!m) return [];
+      return m[0]
+        .split("\n")
+        .filter((l) => l.trim().startsWith("-"))
+        .map((l) => l.replace(/^[-*]\s*/, "").trim());
+    };
+
+    const score = getScore();
+    const hire = getHire();
+    const meta = getMeta();
+    const table = getTable();
+    const strengths = getSection("Strengths");
+    const concerns = getSection("Concerns");
+    const followups = getSection("Suggested Follow-up");
+
     return (
-      <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center justify-center p-10">
-        <h1 className="text-[#f97316] uppercase tracking-[0.5em] mb-10">
-          Report_Ready
-        </h1>
-        <div className="text-8xl font-black italic mb-6">
-          {evaluation.totalScore}
-          <span className="text-2xl opacity-20 not-italic">/10</span>
+      <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center p-6">
+        <div className="w-full max-w-[580px] flex flex-col gap-5">
+          {/* ── Score hero ── */}
+          <div className="text-center pb-2">
+            <div className="inline-flex items-center gap-2 border border-[#f97316]/25 rounded-full px-4 py-1.5 mb-5">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#f97316]" />
+              <span className="text-[11px] text-[#f97316] tracking-[0.15em] uppercase font-semibold">
+                Session Complete
+              </span>
+            </div>
+            <div className="text-[80px] font-black italic leading-none tracking-[-3px]">
+              {score}
+              <span className="text-[24px] text-white/15 not-italic font-normal tracking-normal">
+                /10
+              </span>
+            </div>
+            {meta && (
+              <p className="text-[11px] text-white/25 mt-2 tracking-[0.1em] uppercase">
+                {meta}
+              </p>
+            )}
+          </div>
+
+          {/* ── Hire + phases count ── */}
+          <div className="grid grid-cols-2 gap-3">
+            {hire && (
+              <div className="bg-[#0d0d0d] border border-white/[0.07] rounded-2xl p-4">
+                <div className="text-[11px] text-white/25 uppercase tracking-widest mb-1.5">
+                  Hire Decision
+                </div>
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`w-2 h-2 rounded-full ${hire.yes ? "bg-green-500" : "bg-red-500"}`}
+                  />
+                  <span className="text-[15px] font-medium">{hire.label}</span>
+                </div>
+              </div>
+            )}
+            {table.length > 0 && (
+              <div className="bg-[#0d0d0d] border border-white/[0.07] rounded-2xl p-4">
+                <div className="text-[11px] text-white/25 uppercase tracking-widest mb-1.5">
+                  Phases Scored
+                </div>
+                <div className="text-[15px] font-medium">
+                  {table.length} of {table.length}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── Phase breakdown table ── */}
+          {table.length > 0 && (
+            <div className="bg-[#0d0d0d] border border-white/[0.07] rounded-2xl overflow-hidden">
+              <div className="px-5 py-3 border-b border-white/[0.06]">
+                <span className="text-[11px] text-white/25 uppercase tracking-widest">
+                  Phase Breakdown
+                </span>
+              </div>
+              {table.map((row, i) => {
+                const s = parseFloat(row.score) || 0;
+                return (
+                  <div
+                    key={i}
+                    className="px-5 py-3 border-b border-white/[0.04] last:border-0"
+                  >
+                    <div className="grid grid-cols-[28px_1fr_1fr_72px] items-center gap-2 mb-2">
+                      <span className="text-[12px] text-white/20">
+                        #{row.phase}
+                      </span>
+                      <span className="text-[13px] text-white/50 capitalize">
+                        {row.topic}
+                      </span>
+                      <span className="text-[13px] text-white/30 capitalize">
+                        {row.topic}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-[3px] bg-white/[0.06] rounded-full">
+                          <div
+                            className="h-full bg-[#f97316] rounded-full"
+                            style={{ width: `${(s / 10) * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-[12px] font-medium min-w-[16px] text-right">
+                          {row.score}
+                        </span>
+                      </div>
+                    </div>
+                    {row.signal && (
+                      <p className="text-[13px] text-white/30 italic leading-relaxed ml-7">
+                        "{row.signal}"
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ── Strengths + Concerns ── */}
+          {(strengths.length > 0 || concerns.length > 0) && (
+            <div className="grid grid-cols-2 gap-3">
+              {strengths.length > 0 && (
+                <div className="bg-[#0d0d0d] border border-white/[0.07] rounded-2xl p-4">
+                  <div className="text-[11px] text-white/25 uppercase tracking-widest mb-3">
+                    Strengths
+                  </div>
+                  <div className="flex flex-col gap-2.5">
+                    {strengths.map((s, i) => (
+                      <div key={i} className="flex gap-2 items-start">
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 shrink-0" />
+                        <span className="text-[13px] text-white/50 leading-relaxed">
+                          {s}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {concerns.length > 0 && (
+                <div className="bg-[#0d0d0d] border border-white/[0.07] rounded-2xl p-4">
+                  <div className="text-[11px] text-white/25 uppercase tracking-widest mb-3">
+                    Concerns
+                  </div>
+                  <div className="flex flex-col gap-2.5">
+                    {concerns.map((c, i) => (
+                      <div key={i} className="flex gap-2 items-start">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 shrink-0" />
+                        <span className="text-[13px] text-white/50 leading-relaxed">
+                          {c}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Follow-up ── */}
+          {followups.length > 0 && (
+            <div className="bg-[#0d0d0d] border border-white/[0.07] rounded-2xl p-4">
+              <div className="text-[11px] text-white/25 uppercase tracking-widest mb-3">
+                Suggested Follow-up
+              </div>
+              <div className="flex flex-col gap-2.5">
+                {followups.map((f, i) => (
+                  <div key={i} className="flex gap-2 items-start">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#f97316] mt-1.5 shrink-0" />
+                    <span className="text-[13px] text-white/50 leading-relaxed">
+                      {f}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── CTA ── */}
+          <button
+            onClick={() => navigate("/profile")}
+            className="w-full py-4 bg-transparent border border-white/[0.08] rounded-[14px] text-white/30 text-[11px] font-semibold tracking-[0.15em] uppercase hover:border-white/20 hover:text-white/50 transition-all"
+          >
+            Back to Profile
+          </button>
         </div>
-        <div className="max-w-xl bg-[#0d0d0d] p-8 rounded-3xl border border-white/5 text-sm text-white/70 italic leading-relaxed">
-          "{evaluation.evaluation}"
-        </div>
-        <button
-          onClick={() => navigate("/profile")}
-          className="mt-10 px-10 py-4 bg-white/5 rounded-full border border-white/10 hover:bg-white/10 transition-all uppercase text-[10px] font-bold tracking-widest"
-        >
-          Terminate_Session
-        </button>
       </div>
     );
+  }
 
-  // 3. Main Interview View
   return (
     <div className="h-screen bg-[#0a0a0a] text-white flex flex-col overflow-hidden font-machina-normal">
       <header className="h-16 border-b border-white/5 flex items-center justify-between px-6 bg-black/40">
@@ -344,7 +623,6 @@ export default function InterviewPage() {
       </header>
 
       <div className="flex-1 flex p-4 gap-4 overflow-hidden">
-        {/* Sidebar: AI + User Video */}
         <div className="w-[320px] flex flex-col gap-4 shrink-0">
           <div className="flex-1 bg-[#0d0d0d] rounded-[2rem] border border-white/5 relative flex items-center justify-center shadow-2xl overflow-hidden">
             <div
@@ -370,7 +648,6 @@ export default function InterviewPage() {
             )}
           </div>
 
-          {/* Control HUD */}
           <div className="h-20 flex items-center justify-between px-6 bg-[#0d0d0d] rounded-3xl border border-white/5">
             <button
               onClick={toggleVoice}
@@ -408,7 +685,6 @@ export default function InterviewPage() {
                 <Code2 size={18} />
               </button>
             </div>
-            {/* HANG UP BUTTON */}
             <button
               onClick={endCall}
               className="p-3 bg-red-600 text-white rounded-xl hover:bg-red-500 transition-all shadow-lg shadow-red-900/20"
@@ -418,7 +694,6 @@ export default function InterviewPage() {
           </div>
         </div>
 
-        {/* Main Content: Chat & Editor */}
         <div className="flex-1 flex gap-4 overflow-hidden">
           <div className="flex-1 bg-[#0d0d0d] rounded-[2rem] border border-white/5 flex flex-col overflow-hidden shadow-2xl">
             <div className="h-12 border-b border-white/5 flex items-center px-6 text-[10px] font-bold tracking-widest text-white/40 uppercase shrink-0 text-4xl">
@@ -434,7 +709,11 @@ export default function InterviewPage() {
                   className={`flex ${m.sender === "You" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[80%] p-4 rounded-3xl text-sm leading-relaxed ${m.sender === "You" ? "bg-[#f97316]/10 border border-[#f97316]/20 text-white rounded-tr-sm" : "bg-white/5 border border-white/10 text-white/70 rounded-tl-sm"}`}
+                    className={`max-w-[80%] p-4 rounded-3xl text-sm leading-relaxed ${
+                      m.sender === "You"
+                        ? "bg-[#f97316]/10 border border-[#f97316]/20 text-white rounded-tr-sm"
+                        : "bg-white/5 border border-white/10 text-white/70 rounded-tl-sm"
+                    }`}
                   >
                     {m.text}
                   </div>
@@ -443,8 +722,21 @@ export default function InterviewPage() {
               <div ref={chatEndRef} />
             </div>
 
-            {/* Input Section */}
+            {/* ── Input section with speaking indicator ── */}
             <div className="p-5 bg-black/40 border-t border-white/5">
+              {/* Speaking indicator bar — only shown when mic is active */}
+              {isListening && (
+                <div className="flex items-center gap-3 mb-3 px-1">
+                  <SpeakingBars active={isUserSpeaking && !isAiSpeaking} />
+                  <span className="text-[11px] text-white/30 tracking-widest uppercase">
+                    {isAiSpeaking
+                      ? "AI speaking…"
+                      : isUserSpeaking
+                        ? "Detected…"
+                        : "Listening"}
+                  </span>
+                </div>
+              )}
               <div className="relative flex items-center gap-3">
                 <input
                   className="flex-1 bg-black border border-white/10 rounded-2xl p-4 text-sm outline-none focus:border-[#f97316]/50 transition-all text-white placeholder:text-white/10 disabled:opacity-50"

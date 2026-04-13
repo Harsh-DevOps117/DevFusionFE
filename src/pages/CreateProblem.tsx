@@ -10,11 +10,13 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom"; // ← Added
-import { createProblem } from "../services/api";
+import { useNavigate } from "react-router-dom";
+
+// ✅ 1. Import ProblemService from our centralized services
+import { ProblemService } from "../services/index";
 
 export default function CreateProblemPage() {
-  const navigate = useNavigate(); // ← Added
+  const navigate = useNavigate();
 
   const [form, setForm] = useState<any>({
     title: "",
@@ -104,10 +106,14 @@ export default function CreateProblemPage() {
 
       console.log("FINAL PAYLOAD:", payload); // 🔥 debug
 
-      const res = await createProblem(payload);
+      // ✅ 2. Use the centralized ProblemService
+      const res = await ProblemService.create(payload);
 
       alert("✅ Problem Created Successfully!");
       console.log(res);
+
+      // Optional: Redirect back to dashboard after success
+      // navigate("/admin");
     } catch (err: any) {
       console.error(err);
       alert(err?.response?.data?.error || "Failed to create problem");

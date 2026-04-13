@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
-import { getProblems } from "../services/api";
+// import Navbar from "../components/Navbar";
+
+// ✅ 1. Import ProblemService from our centralized index
+import { ProblemService } from "../services/index";
 
 export default function ProblemsPage() {
   const [problems, setProblems] = useState<any[]>([]);
@@ -9,7 +11,8 @@ export default function ProblemsPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    getProblems()
+    // ✅ 2. Use the centralized ProblemService
+    ProblemService.getAll()
       .then((res) => setProblems(res.data.problems || []))
       .catch(console.error);
   }, []);
@@ -28,7 +31,7 @@ export default function ProblemsPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white px-6 pt-32 font-['fontNormal']">
-      <Navbar />
+      {/* <Navbar /> */}
 
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-12 gap-6">

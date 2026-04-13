@@ -14,8 +14,10 @@ import {
 import React, { useState } from "react";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
-import { setCredentials } from "../store/authSlice"; // Ensure this path is correct
-import { api } from "../utils/api"; // Ensure this path is correct
+import { setCredentials } from "../store/authSlice";
+
+// ✅ Import AuthService from our centralized index
+import { AuthService } from "../services/index";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -44,43 +46,47 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setLoading(true);
 
     try {
-      if (mode === "login" || mode === "signup") {
-        const endpoint = mode === "login" ? "/login" : "/signup";
-        const payload =
-          mode === "login"
-            ? { email: formData.email, password: formData.password }
-            : {
-                username: formData.fullName,
-                email: formData.email,
-                password: formData.password,
-              };
+      if (mode === "login") {
+        // ✅ Use centralized login
+        const response = await AuthService.login({
+          email: formData.email,
+          password: formData.password,
+        });
 
-        const response = await api.post(endpoint, payload);
-
-        // Your backend returns: { success: true, accessToken: "...", user: {...} }
         if (response.data.accessToken) {
           const { user, accessToken } = response.data;
-
-          // Push to Redux (which also saves to LocalStorage)
           dispatch(setCredentials({ user, accessToken }));
+          toast.success("Handshake Successful", {
+            icon: <Zap size={16} className="text-[#f97316]" />,
+          });
+          onClose();
+        }
+      } else if (mode === "signup") {
+        // ✅ Use centralized signup
+        const response = await AuthService.signup({
+          username: formData.fullName,
+          email: formData.email,
+          password: formData.password,
+        });
 
-          toast.success(
-            mode === "login" ? "Handshake Successful" : "Identity Registered",
-            {
-              icon: <Zap size={16} className="text-[#f97316]" />,
-            },
-          );
-
+        if (response.data.accessToken) {
+          const { user, accessToken } = response.data;
+          dispatch(setCredentials({ user, accessToken }));
+          toast.success("Identity Registered", {
+            icon: <Zap size={16} className="text-[#f97316]" />,
+          });
           onClose();
         }
       } else if (mode === "forgot-password") {
-        await api.post("/forgot-password", { email: formData.email });
+        // ✅ Use centralized forgot password
+        await AuthService.forgotPassword({ email: formData.email });
         toast.info("OTP Dispatched to your terminal.", {
           icon: <ShieldCheck size={16} className="text-blue-400" />,
         });
         setMode("reset-password");
       } else if (mode === "reset-password") {
-        await api.post("/reset-password", {
+        // ✅ Use centralized reset password
+        await AuthService.resetPassword({
           email: formData.email,
           otp: formData.otp,
           newPassword: formData.password,

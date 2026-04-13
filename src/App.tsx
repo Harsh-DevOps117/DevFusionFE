@@ -12,6 +12,7 @@ import "react-toastify/dist/ReactToastify.css";
 import "./App.css";
 import AdminRoute from "./components/AdminROUTE";
 import ResumePivot from "./components/Interview/ResumeAnalysiss";
+import LoginPage from "./components/LoginTest";
 import NotFound from "./components/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute"; // 🛡️ Added
 import AdminDashboard from "./pages/AdminStats";
@@ -19,13 +20,14 @@ import CreateProblemPage from "./pages/CreateProblem";
 import InterviewPage from "./pages/InterviewPage";
 import LandingPage from "./pages/LandingPage";
 import Leaderboard from "./pages/Leaderboard";
+import PlaylistDetailsPage from "./pages/PlaylistDetailsPage";
 import PlaylistsPage from "./pages/PlaylistPage";
 import ProblemsPage from "./pages/ProblemPage";
 import ProblemSolvePage from "./pages/ProblemSolvePage";
 import SubmissionsPage from "./pages/SubmissionPage";
 import Userpage from "./pages/Userpages";
 import McqPage from "./pages/questionPageMcq";
-
+// import Login from ";
 const ScrollToTop = () => {
   const { pathname } = useLocation();
   useEffect(() => {
@@ -53,9 +55,11 @@ const App = () => {
       />
 
       <div className="bg-[#0a0a0a] min-h-screen">
+        {/* <Navbar></Navbar> */}
         <Routes>
           {/* --- PUBLIC ROUTES --- */}
           <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />}></Route>
           {/* --- PROTECTED USER ROUTES --- */}
           {/* In routes ke liye user ka logged-in hona zaroori hai */}{" "}
           <Route element={<ProtectedRoute />}>
@@ -69,6 +73,7 @@ const App = () => {
             <Route path="/problem/:id" element={<ProblemSolvePage />} />
             <Route path="/submissions" element={<SubmissionsPage />} />
             <Route path="/playlists" element={<PlaylistsPage />} />
+            <Route path="/playlist/:id" element={<PlaylistDetailsPage />} />
           </Route>
           {/* --- PROTECTED ADMIN ROUTES --- */}
           {/* In routes ke liye user ka ADMIN hona zaroori hai */}

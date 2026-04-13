@@ -11,8 +11,9 @@ import {
   Zap,
 } from "lucide-react";
 import { useState } from "react";
-import { toast } from "react-toastify"; // 🔥 Added
-import { createOrder, verifyPayment } from "../services/paymentService";
+import { toast } from "react-toastify";
+// ✅ Pointing to our centralized services
+import { PaymentService } from "../services/index";
 import { loadRazorpayScript, openRazorpay } from "../services/razorpay";
 import PlanGate from "./PlanGate";
 
@@ -59,7 +60,7 @@ const PrepGridFeatures = () => {
       }
 
       // 2. Create Order
-      const data = await createOrder(amount);
+      const data = await PaymentService.createOrder(amount);
       const order = data.order;
 
       // 3. Open Checkout
@@ -72,7 +73,8 @@ const PrepGridFeatures = () => {
         order_id: order.id,
 
         handler: async function (response: any) {
-          const verifyRes = await verifyPayment({
+          // ✅ CRITICAL FIX: Added PaymentService. prefix here!
+          const verifyRes = await PaymentService.verifyPayment({
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature,

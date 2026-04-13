@@ -9,7 +9,9 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import { executeCode } from "../../utils/api";
+
+// ✅ Updated to use the direct execution method for the sandbox
+import { executeCodeDirect } from "../../services/index";
 
 interface MonacoProps {
   initialCode?: string;
@@ -23,7 +25,7 @@ export default function MonacoSandbox({ initialCode, onClose }: MonacoProps) {
   const [isError, setIsError] = useState(false);
 
   const runCode = async () => {
-    // 1. Prevent empty execution
+    // 1. Prevent empty execution or default placeholder
     if (!code || code === "// Write your code here...") return;
 
     setIsLoading(true);
@@ -31,23 +33,35 @@ export default function MonacoSandbox({ initialCode, onClose }: MonacoProps) {
 
     try {
       /**
-       * ⚠️ CRITICAL FIX:
-       * Judge0 requires a numeric language_id.
-       * 63 = JavaScript (Node.js)
-       * We pass 'code' as the second argument, NOT the string "javascript".
+       * ⚠️ LANGUAGE CONFIGURATION:
+       * 63 = JavaScript (Node.js) via Judge0
        */
-      const result = await executeCode(code, 63);
+      const result = await executeCodeDirect(code, 63);
 
-      // Judge0 returns 'run' object based on your previous api.ts wrapper
-      if (result.run) {
+      // Handle response from the direct RapidAPI call
+      if (
+        result.stdout !== undefined ||
+        result.stderr !== undefined ||
+        result.compile_output !== undefined
+      ) {
+        // Judge0 direct returns stdout, stderr, or compile_output based on status
+        const rawOutput =
+          result.stdout ||
+          result.stderr ||
+          result.compile_output ||
+          "Program executed with no output.";
+        setOutput(rawOutput.split("\n"));
+
+        // Non-zero status ID (anything other than 3) usually indicates an error in Judge0
+        if (result.status?.id !== 3) {
+          setIsError(true);
+        }
+      } else if (result.run) {
+        // Fallback for your previous wrapper structure if applicable
         const rawOutput =
           result.run.output || "Program executed with no output.";
         setOutput(rawOutput.split("\n"));
-
-        // Check if exit code is non-zero (errors)
-        if (result.run.code !== 0) {
-          setIsError(true);
-        }
+        if (result.run.code !== 0) setIsError(true);
       }
     } catch (err: any) {
       setIsError(true);
@@ -59,7 +73,7 @@ export default function MonacoSandbox({ initialCode, onClose }: MonacoProps) {
       } else if (err.response?.status === 422) {
         setOutput([
           "⚠️ [422] UNPROCESSABLE ENTITY",
-          "Check if language_id (63) is correct in api.ts.",
+          "Check if language_id (63) is correct in your services file.",
         ]);
       } else {
         setOutput([
@@ -181,7 +195,6 @@ export default function MonacoSandbox({ initialCode, onClose }: MonacoProps) {
           </div>
         </div>
 
-        {/* RIGHT: MONACO EDITOR */}
         <div className="flex-1 relative bg-[#1e1e1e]">
           <Editor
             height="100%"

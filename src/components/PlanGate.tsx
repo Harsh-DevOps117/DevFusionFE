@@ -6,38 +6,45 @@ import type { RootState } from "../store/store";
 interface PlanGateProps {
   children: React.ReactNode;
   showOnlyFor?: "PRO" | "FREE" | "BOTH";
+  hideFor?: "PRO" | "FREE"; // ✅ Added this prop
 }
 
 const PlanGate: React.FC<PlanGateProps> = ({
   children,
-  showOnlyFor = "PRO",
+  showOnlyFor,
+  hideFor,
 }) => {
   const { user, isAuthenticated } = useSelector(
     (state: RootState) => state.auth,
   );
   const [mounted, setMounted] = useState(false);
 
-  // 1. Prevent Hydration Mismatch (Next.js safety)
   useEffect(() => {
     setMounted(true);
   }, []);
 
   if (!mounted) return null;
 
-  // 2. Auth Check
-  if (!isAuthenticated || !user) return null;
+  // 1. If not logged in, we usually want to show the Pricing/Razorpay
+  // so they can actually buy it!
+  if (!isAuthenticated || !user) {
+    // If we are specifically hiding things for FREE users, return null
+    if (showOnlyFor === "PRO") return null;
+    return <>{children}</>;
+  }
 
-  // 3. Logic Flip:
-  // If we want BOTH, show it.
-  if (showOnlyFor === "BOTH") return <>{children}</>;
-
-  // If the user's plan DOES NOT match the required plan, hide it.
-  if (user.plan !== showOnlyFor) {
-    console.log(`Plan Mismatch: User is ${user.plan}, need ${showOnlyFor}`);
+  // 2. Handle "hideFor" Logic (This is what you're using in your Features page)
+  if (hideFor && user.plan === hideFor) {
     return null;
   }
 
-  // 4. Success: User is PRO (or whatever was requested)
+  // 3. Handle "showOnlyFor" Logic
+  if (showOnlyFor === "BOTH") return <>{children}</>;
+
+  if (showOnlyFor && user.plan !== showOnlyFor) {
+    return null;
+  }
+
   return <>{children}</>;
 };
 

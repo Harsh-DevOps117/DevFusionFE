@@ -12,8 +12,8 @@ import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
-// IMPORTANT: Ensure this points to the file where you added the Interceptor!
-import { getAdminStats } from "../services/api";
+// ✅ 1. Import AdminService from our centralized index
+import { AdminService } from "../services/index";
 
 export default function AdminDashboard() {
   const [data, setData] = useState<any>(null);
@@ -30,7 +30,6 @@ export default function AdminDashboard() {
     }
 
     // 2. ROLE GUARD: If logged in but NOT an Admin, kick to home
-    // NOTE: If your DB says "USER", this will trigger.
     if (user?.role !== "ADMIN") {
       console.error("Current User Role:", user?.role); // Debugging
       toast.error("UNAUTHORIZED: ADMIN ACCESS ONLY");
@@ -41,7 +40,8 @@ export default function AdminDashboard() {
     // 3. EXECUTE: Fetch Admin Data
     const fetchStats = async () => {
       try {
-        const res = await getAdminStats();
+        // ✅ 2. Use AdminService.getStats()
+        const res = await AdminService.getStats();
         setData(res.data);
       } catch (err: any) {
         console.error(
@@ -50,8 +50,9 @@ export default function AdminDashboard() {
         );
 
         if (err.response?.status === 401) {
+          // Note: The apiClient interceptor will usually handle the 401/refresh
+          // automatically, but it's good to have a fallback here just in case!
           toast.error("Protocol Error: Token Invalid or Role Mismatch");
-          // navigate("/");
         } else {
           toast.error("Failed to sync with Core Stats.");
         }
