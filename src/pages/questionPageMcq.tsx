@@ -33,7 +33,6 @@ export default function QuizPage() {
     Record<string, boolean>
   >({});
 
-  // --- 1. INITIAL GENERATION ---
   const handleGenerate = async () => {
     if (!topic.trim()) return;
     setStep("generating");
@@ -48,7 +47,6 @@ export default function QuizPage() {
     }
   };
 
-  // --- 2. POLLING ENGINE ---
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (step === "generating" && jobId) {
@@ -79,7 +77,6 @@ export default function QuizPage() {
     return () => clearInterval(interval);
   }, [step, jobId]);
 
-  // --- 3. TIMER LOGIC ---
   useEffect(() => {
     if (step === "active" && timeLeft > 0) {
       const t = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
@@ -89,7 +86,6 @@ export default function QuizPage() {
     }
   }, [step, timeLeft]);
 
-  // --- 4. SUBMISSION ---
   const handleSubmit = async () => {
     setIsSubmitting(true);
     const formatted = quizData.questions.map((q: any) => ({
@@ -104,7 +100,6 @@ export default function QuizPage() {
       });
       setScore(res.data.data.score);
 
-      // In case the API returns the graded questions with the true answers now visible
       if (res.data.data.quiz) {
         setQuizData(res.data.data.quiz);
       } else if (res.data.data.questions) {
@@ -136,32 +131,32 @@ export default function QuizPage() {
   // ==========================================
   if (step === "setup")
     return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center p-6 font-['fontNormal']">
-        <div className="w-full max-w-[460px] bg-[#0d0d0d] border border-white/10 rounded-[32px] p-12 relative overflow-hidden">
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4 sm:p-6 font-['fontNormal']">
+        <div className="w-full max-w-[460px] bg-[#0d0d0d] border border-white/10 rounded-[24px] sm:rounded-[32px] p-6 sm:p-10 lg:p-12 relative overflow-hidden">
           <div className="absolute -top-20 -right-20 w-[220px] h-[220px] bg-[#f97316]/10 blur-[60px] rounded-full pointer-events-none" />
 
           <div className="relative z-10">
-            <div className="inline-flex items-center gap-2 bg-[#f97316]/10 border border-[#f97316]/20 rounded-xl px-3 py-1.5 mb-6">
-              <Zap size={16} className="text-[#f97316]" />
+            <div className="inline-flex items-center gap-2 bg-[#f97316]/10 border border-[#f97316]/20 rounded-xl px-3 py-1.5 mb-5 sm:mb-6">
+              <Zap size={14} className="text-[#f97316]" />
               <span className="text-[10px] font-bold text-[#f97316] uppercase tracking-widest">
                 Quiz_Enclave
               </span>
             </div>
 
-            <h2 className="text-3xl font-extrabold text-white tracking-tighter leading-tight mb-2">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tighter leading-tight mb-2">
               PrepGrid MCQ
             </h2>
-            <p className="text-[9px] font-bold text-white/20 uppercase tracking-[0.4em] mb-10">
+            <p className="text-[9px] font-bold text-white/20 uppercase tracking-[0.4em] mb-8 sm:mb-10">
               Automated Assessment Synthesis
             </p>
 
-            <div className="space-y-6">
+            <div className="space-y-5 sm:space-y-6">
               <div>
-                <label className="text-[9px] font-bold text-[#f97316] uppercase tracking-widest block mb-3">
+                <label className="text-[9px] font-bold text-[#f97316] uppercase tracking-widest block mb-2 sm:mb-3">
                   Target_Subject
                 </label>
                 <input
-                  className="w-full bg-[#0a0a0a] border border-white/5 p-5 rounded-2xl text-white text-sm outline-none focus:border-[#f97316]/40 transition-all placeholder:text-white/10"
+                  className="w-full bg-[#0a0a0a] border border-white/5 p-4 sm:p-5 rounded-2xl text-white text-sm outline-none focus:border-[#f97316]/40 transition-all placeholder:text-white/10"
                   placeholder="e.g. System_Design"
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
@@ -169,7 +164,7 @@ export default function QuizPage() {
               </div>
 
               <div>
-                <label className="text-[9px] font-bold text-[#f97316] uppercase tracking-widest block mb-3">
+                <label className="text-[9px] font-bold text-[#f97316] uppercase tracking-widest block mb-2 sm:mb-3">
                   Difficulty_Mode
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -196,7 +191,7 @@ export default function QuizPage() {
                     <button
                       key={d.id}
                       onClick={() => setDifficulty(d.id as Difficulty)}
-                      className={`flex flex-col items-center gap-1.5 p-4 rounded-2xl border transition-all ${
+                      className={`flex flex-col items-center gap-1.5 p-3 sm:p-4 rounded-2xl border transition-all ${
                         difficulty === d.id
                           ? "bg-white/5"
                           : "bg-[#0a0a0a] border-white/5 hover:border-white/10"
@@ -220,7 +215,7 @@ export default function QuizPage() {
                       >
                         {d.label}
                       </span>
-                      <span className="text-[8px] text-white/20 uppercase tracking-tighter">
+                      <span className="text-[8px] text-white/20 uppercase tracking-tighter hidden sm:block">
                         {d.desc}
                       </span>
                     </button>
@@ -231,7 +226,7 @@ export default function QuizPage() {
               <button
                 onClick={handleGenerate}
                 disabled={!topic.trim()}
-                className="w-full py-5 bg-white text-black rounded-2xl font-black uppercase text-[11px] tracking-widest hover:bg-[#f97316] hover:text-white transition-all disabled:opacity-10 active:scale-95 shadow-2xl"
+                className="w-full py-4 sm:py-5 bg-white text-black rounded-2xl font-black uppercase text-[11px] tracking-widest hover:bg-[#f97316] hover:text-white transition-all disabled:opacity-10 active:scale-95 shadow-2xl"
               >
                 Initialize_Synthesis
               </button>
@@ -246,13 +241,13 @@ export default function QuizPage() {
   // ==========================================
   if (step === "generating")
     return (
-      <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center font-['fontNormal']">
-        <div className="relative w-28 h-28 mb-10">
+      <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center font-['fontNormal'] px-4">
+        <div className="relative w-24 h-24 sm:w-28 sm:h-28 mb-8 sm:mb-10">
           <div className="absolute inset-0 border-[1.5px] border-white/5 border-t-[#f97316] rounded-full animate-spin" />
           <div className="absolute inset-4 border border-[#f97316]/20 border-b-[#f97316] rounded-full animate-[spin_0.8s_linear_infinite_reverse]" />
           <BrainCircuit
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[#f97316] animate-pulse"
-            size={24}
+            size={22}
           />
         </div>
         <div className="text-center space-y-2">
@@ -271,50 +266,54 @@ export default function QuizPage() {
   // ==========================================
   if (step === "active" && quizData)
     return (
-      <div className="min-h-screen bg-[#050505] text-white p-4 py-8 font-['fontNormal']">
+      <div className="min-h-screen bg-[#050505] text-white p-3 sm:p-4 py-6 sm:py-8 font-['fontNormal']">
         <div className="max-w-[860px] mx-auto space-y-4">
           {/* HUD HEADER */}
-          <header className="sticky top-4 z-50 bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 p-5 rounded-3xl flex justify-between items-center shadow-2xl">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center">
-                <Layers size={18} className="text-[#f97316]" />
-              </div>
-              <div>
-                <h1 className="text-base font-black uppercase tracking-tight leading-none">
-                  {quizData.topic}
-                </h1>
-                <p className="text-[8px] text-[#f97316] font-bold uppercase tracking-[0.3em] mt-2">
-                  Assessment_Stream_Live
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-6">
-              <div className="text-right">
-                <div className="text-2xl font-black italic">
-                  {Object.keys(answers).length}
-                  <span className="text-white/10 not-italic text-sm">
-                    {" "}
-                    / {quizData.questions.length}
-                  </span>
+          <header className="sticky top-3 sm:top-4 z-50 bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-2xl">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0">
+              {/* Left: Topic */}
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Layers size={16} className="text-[#f97316]" />
                 </div>
-                <p className="text-[8px] uppercase tracking-widest text-white/20">
-                  Resolved
-                </p>
+                <div>
+                  <h1 className="text-sm sm:text-base font-black uppercase tracking-tight leading-none">
+                    {quizData.topic}
+                  </h1>
+                  <p className="text-[8px] text-[#f97316] font-bold uppercase tracking-[0.3em] mt-1.5">
+                    Assessment_Stream_Live
+                  </p>
+                </div>
               </div>
-              <div className="w-px h-8 bg-white/5" />
-              <button
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="bg-[#f97316] text-black px-6 py-2.5 rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-white transition-all active:scale-95 disabled:opacity-50"
-              >
-                {isSubmitting ? "Evaluating..." : "Commit_Now"}
-              </button>
+
+              {/* Right: Counter + Button */}
+              <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6">
+                <div className="text-left sm:text-right">
+                  <div className="text-xl sm:text-2xl font-black italic">
+                    {Object.keys(answers).length}
+                    <span className="text-white/10 not-italic text-xs sm:text-sm">
+                      {" "}
+                      / {quizData.questions.length}
+                    </span>
+                  </div>
+                  <p className="text-[8px] uppercase tracking-widest text-white/20">
+                    Resolved
+                  </p>
+                </div>
+                <div className="hidden sm:block w-px h-8 bg-white/5" />
+                <button
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className="bg-[#f97316] text-black px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-white transition-all active:scale-95 disabled:opacity-50 whitespace-nowrap"
+                >
+                  {isSubmitting ? "Evaluating..." : "Commit_Now"}
+                </button>
+              </div>
             </div>
           </header>
 
           {/* TIMER BAR */}
-          <div className="px-2 space-y-1.5 mb-6">
+          <div className="px-1 sm:px-2 space-y-1.5 mb-4 sm:mb-6">
             <div className="flex justify-between items-end">
               <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">
                 Session_Timer
@@ -340,15 +339,15 @@ export default function QuizPage() {
             {quizData.questions.map((q: any, i: number) => (
               <div
                 key={q.id}
-                className={`p-10 rounded-[2.5rem] border transition-all duration-500 ${
+                className={`p-5 sm:p-8 lg:p-10 rounded-[2rem] sm:rounded-[2.5rem] border transition-all duration-500 ${
                   answers[q.id]
                     ? "bg-[#0a0a0a] border-white/10"
                     : "bg-[#080808] border-white/5"
                 }`}
               >
-                <div className="flex justify-between items-center mb-6">
+                <div className="flex justify-between items-center mb-4 sm:mb-6">
                   <div className="flex items-center gap-2">
-                    <Terminal size={12} className="text-[#f97316]/40" />
+                    <Terminal size={11} className="text-[#f97316]/40" />
                     <span className="text-[9px] font-bold text-white/20 uppercase tracking-[0.4em]">
                       Node_{String(i + 1).padStart(2, "0")}
                     </span>
@@ -358,24 +357,24 @@ export default function QuizPage() {
                   )}
                 </div>
 
-                <h3 className="text-xl font-medium mb-10 leading-relaxed text-white/90">
+                <h3 className="text-base sm:text-lg lg:text-xl font-medium mb-6 sm:mb-8 lg:mb-10 leading-relaxed text-white/90">
                   {q.question}
                 </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {q.options.map((opt: string) => (
                     <button
                       key={opt}
                       onClick={() => setAnswers({ ...answers, [q.id]: opt })}
-                      className={`p-5 rounded-2xl border text-left text-sm font-bold transition-all flex justify-between items-center group ${
+                      className={`p-4 sm:p-5 rounded-2xl border text-left text-xs sm:text-sm font-bold transition-all flex justify-between items-center gap-2 ${
                         answers[q.id] === opt
                           ? "bg-[#f97316] border-[#f97316] text-black"
                           : "bg-black/40 border-white/5 text-white/40 hover:border-white/20"
                       }`}
                     >
-                      <span>{opt}</span>
+                      <span className="leading-snug">{opt}</span>
                       <div
-                        className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        className={`w-4 h-4 rounded-full border flex-shrink-0 flex items-center justify-center ${
                           answers[q.id] === opt
                             ? "border-black/20"
                             : "border-white/10"
@@ -394,9 +393,12 @@ export default function QuizPage() {
 
           {/* PARTIAL WARN */}
           {Object.keys(answers).length < quizData.questions.length && (
-            <div className="p-5 bg-[#f97316]/5 border border-[#f97316]/10 rounded-2xl flex items-center gap-4 animate-pulse">
-              <AlertTriangle className="text-[#f97316]" size={18} />
-              <p className="text-[9px] text-[#f97316]/80 uppercase tracking-widest">
+            <div className="p-4 sm:p-5 bg-[#f97316]/5 border border-[#f97316]/10 rounded-2xl flex items-start sm:items-center gap-3 sm:gap-4 animate-pulse">
+              <AlertTriangle
+                className="text-[#f97316] flex-shrink-0 mt-0.5 sm:mt-0"
+                size={16}
+              />
+              <p className="text-[9px] text-[#f97316]/80 uppercase tracking-widest leading-relaxed">
                 Partial Session —{" "}
                 {quizData.questions.length - Object.keys(answers).length}{" "}
                 unresolved nodes will be marked inefficient.
@@ -413,7 +415,6 @@ export default function QuizPage() {
   if (step === "result" && quizData) {
     const totalQ = quizData.questions.length;
 
-    // Normalize strings for calculating correct counts to avoid spacing issues
     const correctCount = quizData.questions.filter((q: any) => {
       const uAns = String(answers[q.id] || "")
         .trim()
@@ -427,59 +428,58 @@ export default function QuizPage() {
     const wrongCount = totalQ - correctCount;
 
     return (
-      <div className="min-h-screen bg-[#050505] text-white p-6 py-12 font-['fontNormal']">
+      <div className="min-h-screen bg-[#050505] text-white p-3 sm:p-6 py-8 sm:py-12 font-['fontNormal']">
         <div className="max-w-[720px] mx-auto space-y-4">
-          {/* ── SCORE CARD ── */}
-          <div className="bg-[#0d0d0d] border border-white/10 rounded-[48px] p-12 text-center relative overflow-hidden">
+          {/* SCORE CARD */}
+          <div className="bg-[#0d0d0d] border border-white/10 rounded-[32px] sm:rounded-[48px] p-8 sm:p-12 text-center relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-[#f97316] to-transparent" />
 
-            <div className="w-16 h-16 bg-[#f97316]/10 border border-[#f97316]/20 rounded-2xl flex items-center justify-center mx-auto mb-8">
-              <Trophy size={32} className="text-[#f97316]" />
+            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-[#f97316]/10 border border-[#f97316]/20 rounded-2xl flex items-center justify-center mx-auto mb-6 sm:mb-8">
+              <Trophy size={28} className="text-[#f97316]" />
             </div>
 
-            <h1 className="text-[100px] font-black italic leading-none tracking-tighter text-white">
+            <h1 className="text-[72px] sm:text-[100px] font-black italic leading-none tracking-tighter text-white">
               {score}
             </h1>
-            <p className="text-[#f97316] text-[10px] font-bold tracking-[0.6em] uppercase mt-2 mb-8">
+            <p className="text-[#f97316] text-[10px] font-bold tracking-[0.6em] uppercase mt-2 mb-6 sm:mb-8">
               System_Efficiency_%
             </p>
 
             {/* STAT PILLS */}
-            <div className="flex justify-center gap-3 flex-wrap">
-              <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-2">
-                <CheckCircle2 size={13} className="text-green-400" />
-                <span className="text-green-400 text-[11px] font-bold uppercase tracking-widest">
+            <div className="flex justify-center gap-2 sm:gap-3 flex-wrap">
+              <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-xl px-3 sm:px-4 py-2">
+                <CheckCircle2 size={12} className="text-green-400" />
+                <span className="text-green-400 text-[10px] sm:text-[11px] font-bold uppercase tracking-widest">
                   {correctCount} Correct
                 </span>
               </div>
-              <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2">
-                <XCircle size={13} className="text-red-400" />
-                <span className="text-red-400 text-[11px] font-bold uppercase tracking-widest">
+              <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 sm:px-4 py-2">
+                <XCircle size={12} className="text-red-400" />
+                <span className="text-red-400 text-[10px] sm:text-[11px] font-bold uppercase tracking-widest">
                   {wrongCount} Wrong
                 </span>
               </div>
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2">
-                <Layers size={13} className="text-white/40" />
-                <span className="text-white/40 text-[11px] font-bold uppercase tracking-widest">
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 sm:px-4 py-2">
+                <Layers size={12} className="text-white/40" />
+                <span className="text-white/40 text-[10px] sm:text-[11px] font-bold uppercase tracking-widest">
                   {totalQ} Total
                 </span>
               </div>
             </div>
           </div>
 
-          {/* ── SECTION LABEL ── */}
-          <div className="flex items-center gap-3 px-2 pt-4">
-            <Terminal size={12} className="text-[#f97316]/60" />
+          {/* SECTION LABEL */}
+          <div className="flex items-center gap-3 px-1 sm:px-2 pt-3 sm:pt-4">
+            <Terminal size={11} className="text-[#f97316]/60" />
             <span className="text-[9px] font-bold text-white/30 uppercase tracking-[0.4em]">
               Answer_Review_Log
             </span>
             <div className="flex-1 h-px bg-white/5" />
           </div>
 
-          {/* ── ANSWER REVIEW CARDS ── */}
+          {/* ANSWER REVIEW CARDS */}
           <div className="space-y-3">
             {quizData.questions.map((q: any, i: number) => {
-              // Normalize strings to check for truthiness, ignoring exact spaces/cases
               const userAnswerRaw = answers[q.id] || "";
               const correctRaw = q.correctAnswer || "";
 
@@ -493,7 +493,7 @@ export default function QuizPage() {
               return (
                 <div
                   key={q.id}
-                  className={`rounded-3xl border overflow-hidden transition-all duration-300 ${
+                  className={`rounded-2xl sm:rounded-3xl border overflow-hidden transition-all duration-300 ${
                     isCorrect
                       ? "bg-green-500/[0.04] border-green-500/15"
                       : isSkipped
@@ -502,27 +502,26 @@ export default function QuizPage() {
                   }`}
                 >
                   {/* CARD HEADER */}
-                  <div className="p-6 pb-4">
-                    <div className="flex items-start justify-between gap-4 mb-4">
-                      <div className="flex items-center gap-2.5">
-                        {/* STATUS ICON */}
+                  <div className="p-4 sm:p-6 pb-3 sm:pb-4">
+                    <div className="flex items-start justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
+                      <div className="flex items-center gap-2">
                         {isCorrect ? (
-                          <div className="w-7 h-7 rounded-xl bg-green-500/15 flex items-center justify-center flex-shrink-0">
+                          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-xl bg-green-500/15 flex items-center justify-center flex-shrink-0">
                             <CheckCircle2
-                              size={14}
+                              size={12}
                               className="text-green-400"
                             />
                           </div>
                         ) : isSkipped ? (
-                          <div className="w-7 h-7 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">
+                          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">
                             <AlertTriangle
-                              size={14}
+                              size={12}
                               className="text-white/20"
                             />
                           </div>
                         ) : (
-                          <div className="w-7 h-7 rounded-xl bg-red-500/15 flex items-center justify-center flex-shrink-0">
-                            <XCircle size={14} className="text-red-400" />
+                          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-xl bg-red-500/15 flex items-center justify-center flex-shrink-0">
+                            <XCircle size={12} className="text-red-400" />
                           </div>
                         )}
 
@@ -544,19 +543,20 @@ export default function QuizPage() {
                         </span>
                       </div>
 
-                      {/* EXPAND EXPLANATION TOGGLE */}
                       {q.explanation && (
                         <button
                           onClick={() => toggleExplanation(q.id)}
-                          className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-[#f97316]/60 hover:text-[#f97316] transition-colors flex-shrink-0"
+                          className="flex items-center gap-1 sm:gap-1.5 text-[9px] font-bold uppercase tracking-widest text-[#f97316]/60 hover:text-[#f97316] transition-colors flex-shrink-0"
                         >
                           {isExpanded ? (
                             <>
-                              Hide <ChevronUp size={12} />
+                              <span className="hidden sm:inline">Hide</span>
+                              <ChevronUp size={11} />
                             </>
                           ) : (
                             <>
-                              Explain <ChevronDown size={12} />
+                              <span className="hidden sm:inline">Explain</span>
+                              <ChevronDown size={11} />
                             </>
                           )}
                         </button>
@@ -564,14 +564,13 @@ export default function QuizPage() {
                     </div>
 
                     {/* QUESTION TEXT */}
-                    <p className="text-base font-medium text-white/80 leading-relaxed mb-5">
+                    <p className="text-sm sm:text-base font-medium text-white/80 leading-relaxed mb-4 sm:mb-5">
                       {q.question}
                     </p>
 
                     {/* OPTIONS */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {q.options.map((opt: string) => {
-                        // Normalize option text for styling matching
                         const optNorm = String(opt).trim().toLowerCase();
                         const isUserChoice = userAnswerNorm === optNorm;
                         const isCorrectOption = correctNorm === optNorm;
@@ -592,24 +591,24 @@ export default function QuizPage() {
                         return (
                           <div
                             key={opt}
-                            className={`p-4 rounded-2xl border text-sm font-bold flex justify-between items-center transition-all ${optStyle}`}
+                            className={`p-3 sm:p-4 rounded-2xl border text-xs sm:text-sm font-bold flex justify-between items-center gap-2 transition-all ${optStyle}`}
                           >
-                            <span>{opt}</span>
-                            <div className="flex items-center gap-1.5">
+                            <span className="leading-snug">{opt}</span>
+                            <div className="flex items-center gap-1 flex-shrink-0">
                               {isCorrectOption && isUserChoice && (
                                 <CheckCircle2
-                                  size={13}
+                                  size={12}
                                   className="text-green-400"
                                 />
                               )}
                               {isCorrectOption && !isUserChoice && (
                                 <CheckCircle2
-                                  size={13}
+                                  size={12}
                                   className="text-green-400/60"
                                 />
                               )}
                               {isUserChoice && !isCorrectOption && (
-                                <XCircle size={13} className="text-red-400" />
+                                <XCircle size={12} className="text-red-400" />
                               )}
                             </div>
                           </div>
@@ -618,18 +617,18 @@ export default function QuizPage() {
                     </div>
                   </div>
 
-                  {/* CORRECT ANSWER CALLOUT (only for wrong/skipped) */}
+                  {/* CORRECT ANSWER CALLOUT */}
                   {!isCorrect && correctRaw && (
-                    <div className="mx-6 mb-4 px-4 py-3 bg-green-500/8 border border-green-500/15 rounded-2xl flex items-center gap-3">
+                    <div className="mx-4 sm:mx-6 mb-3 sm:mb-4 px-3 sm:px-4 py-2.5 sm:py-3 bg-green-500/8 border border-green-500/15 rounded-2xl flex items-center gap-2 sm:gap-3">
                       <CheckCircle2
-                        size={13}
+                        size={12}
                         className="text-green-400 flex-shrink-0"
                       />
                       <div>
                         <span className="text-[9px] font-bold text-green-400/50 uppercase tracking-widest block mb-0.5">
                           Correct_Answer
                         </span>
-                        <span className="text-sm font-bold text-green-400">
+                        <span className="text-xs sm:text-sm font-bold text-green-400">
                           {correctRaw}
                         </span>
                       </div>
@@ -638,11 +637,11 @@ export default function QuizPage() {
 
                   {/* EXPLANATION PANEL */}
                   {q.explanation && isExpanded && (
-                    <div className="mx-6 mb-5 px-5 py-4 bg-[#f97316]/5 border border-[#f97316]/15 rounded-2xl">
+                    <div className="mx-4 sm:mx-6 mb-4 sm:mb-5 px-4 sm:px-5 py-3 sm:py-4 bg-[#f97316]/5 border border-[#f97316]/15 rounded-2xl">
                       <p className="text-[9px] font-bold text-[#f97316]/50 uppercase tracking-widest mb-2">
                         Explanation
                       </p>
-                      <p className="text-sm text-white/50 leading-relaxed">
+                      <p className="text-xs sm:text-sm text-white/50 leading-relaxed">
                         {q.explanation}
                       </p>
                     </div>
@@ -652,8 +651,8 @@ export default function QuizPage() {
             })}
           </div>
 
-          {/* ── ACTION BUTTONS ── */}
-          <div className="flex gap-3 pt-4">
+          {/* ACTION BUTTONS */}
+          <div className="flex flex-col sm:flex-row gap-3 pt-3 sm:pt-4">
             <button
               onClick={() => window.location.reload()}
               className="flex-1 py-4 bg-white text-black rounded-2xl font-bold uppercase text-[10px] tracking-widest hover:bg-[#f97316] hover:text-white transition-all active:scale-95"
