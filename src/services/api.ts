@@ -2,7 +2,7 @@
 // import axios from "axios";
 
 // const API = axios.create({
-//   baseURL: "https://prepgrid.in/v1",
+//   baseURL: "https://prepgird.in/v1",
 //   withCredentials: true,
 // });
 

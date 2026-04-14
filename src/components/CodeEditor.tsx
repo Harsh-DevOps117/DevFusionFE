@@ -1,14 +1,18 @@
 import Editor, { useMonaco } from "@monaco-editor/react";
 import { useEffect } from "react";
 
-export default function CodeEditor({ code, setCode, language = "javascript" }: any) {
+export default function CodeEditor({
+  code,
+  setCode,
+  language = "javascript",
+}: any) {
   const monaco = useMonaco();
 
   useEffect(() => {
     if (!monaco) return;
 
     // 🔥 CUSTOM THEME (MATCH YOUR APP)
-    monaco.editor.defineTheme("prepgrid-dark", {
+    monaco.editor.defineTheme("prepgird-dark", {
       base: "vs-dark",
       inherit: true,
       rules: [
@@ -28,18 +32,17 @@ export default function CodeEditor({ code, setCode, language = "javascript" }: a
       },
     });
 
-    monaco.editor.setTheme("prepgrid-dark");
+    monaco.editor.setTheme("prepgird-dark");
   }, [monaco]);
 
   return (
     <div className="h-full w-full border-t border-white/10">
-
       <Editor
         height="100%"
         language={language}
         value={code}
         onChange={(value) => setCode(value || "")}
-        theme="prepgrid-dark"
+        theme="prepgird-dark"
         options={{
           fontSize: 15,
           fontFamily: "JetBrains Mono, monospace",
@@ -53,7 +56,6 @@ export default function CodeEditor({ code, setCode, language = "javascript" }: a
           },
         }}
       />
-
     </div>
   );
 }
