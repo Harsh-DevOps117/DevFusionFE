@@ -21,6 +21,7 @@ export const ProblemService = {
   getById: (id: string) => apiClient.get(`/problem/get-problem/${id}`),
   getSolved: () => apiClient.get("/problem/get-solved-problems"),
   create: (data: any) => apiClient.post("/problem/create-problem", data),
+  delete:(id:string)=>apiClient.delete(`problem/delete/${id}`)
 };
 
 // --- SUBMISSION APIS ---
