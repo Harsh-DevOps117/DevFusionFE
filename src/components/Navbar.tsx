@@ -27,6 +27,7 @@ const Navbar = () => {
     { name: "DSA", href: "/problems" },
     { name: "CHAMPS", href: "/leader" },
     { name: "PLAYLIST", href: "/playlists" },
+    { name: "RESUME", href: "/resume-builder" },
     ...(isAuthenticated && user?.role === "ADMIN"
       ? [
           { name: "STATS", href: "/stats" },

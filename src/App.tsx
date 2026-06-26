@@ -26,6 +26,7 @@ import ProblemsPage from "./pages/ProblemPage";
 import ProblemSolvePage from "./pages/ProblemSolvePage";
 import SubmissionsPage from "./pages/SubmissionPage";
 import Userpage from "./pages/Userpages";
+import ResumeBuilderPage from "./pages/ResumeBuilderPage";
 import McqPage from "./pages/questionPageMcq";
 // import Login from ";
 const ScrollToTop = () => {
@@ -60,6 +61,7 @@ const App = () => {
           {/* --- PUBLIC ROUTES --- */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />}></Route>
+          <Route path="/resume-builder" element={<ResumeBuilderPage />} />
           {/* --- PROTECTED USER ROUTES --- */}
           {/* In routes ke liye user ka logged-in hona zaroori hai */}{" "}
           <Route element={<ProtectedRoute />}>
