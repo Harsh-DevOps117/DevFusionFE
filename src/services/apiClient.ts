@@ -1,7 +1,7 @@
 // src/services/apiClient.ts
 import axios from "axios";
 
-const BASE_URL = "https://prepgird.in/v1";
+const BASE_URL = "http://3.88.176.124:3001/v1";
 //const BASE_URL="http://localhost:3005/v1"
 
 // 1. Create the central instance (Removed the hardcoded Content-Type here)
