@@ -4,8 +4,14 @@ import { useNavigate } from "react-router-dom";
 
 // ✅ 1. Import ProblemService from our centralized index
 import { ProblemService } from "../services/index";
+import { Trash2Icon, User } from "lucide-react";
+import { useSelector } from "react-redux";
+import type { RootState } from "../store/store";
 
 export default function ProblemsPage() {
+  const { user } = useSelector(
+    (state: RootState) => state.auth,
+  );
   const [problems, setProblems] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
@@ -27,6 +33,21 @@ export default function ProblemsPage() {
     if (d === "Medium")
       return "text-yellow-400 bg-yellow-400/10 border-yellow-400/20";
     return "text-red-400 bg-red-400/10 border-red-400/20";
+  };
+
+  const handleDelete = async (e: React.MouseEvent, problemId: string) => {
+    e.stopPropagation();
+
+    const confirmDelete = window.confirm("Delete this problem?");
+    if (!confirmDelete) return;
+
+    try {
+      await ProblemService.delete(problemId);
+      setProblems((prev) => prev.filter((p) => p.id !== problemId));
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete problem");
+    }
   };
 
   return (
@@ -120,6 +141,16 @@ export default function ProblemsPage() {
                     {p.difficulty}
                   </span>
                 </div>
+                {user?.role === "ADMIN" && (
+                  <div className="col-span-1 flex justify-center">
+                    <button
+                      onClick={(e) => handleDelete(e, p.id)}
+                      className="p-2 rounded-lg hover:bg-red-500/10 transition"
+                    >
+                      <Trash2Icon className="w-4 h-4 text-[#f97316] " />
+                    </button>
+                  </div>
+                )}
 
                 {/* ACTION */}
                 <div className="col-span-2 text-right">
